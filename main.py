@@ -2,6 +2,15 @@ import functions as fun
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Consider change if accounts are maxed out
+# Allow for fixing one value and determining others (e.g., fix
+# retirement balance and determine contributions.
+# Consider making a table or 3d plot to compare multiple variables
+# at a time, such as different APYs. Can also plot multiple graphs
+# for some sampling of APYs.
+# Show multiple axes for different salaries, multiple graphs on each
+# for diff APYs.
+
 def trial_1():
   salary = 70e3
   tax = functions.income_tax(salary)
@@ -19,13 +28,19 @@ def trial_2():
   print(retirement)
 
 def trial_3():
-  
-  work_years = 40                     # Check if thousands=True in fun
-  ret_years = 20
-  salaries = [70 + 2*i for i in range(work_years)]
+                                          # Check if thousands=True in fun
+  print("Yearly salary will be computed as increasing linearly from \n" \
+        "starting salary to ending salary over the course of number \n" \
+        "of years working.")
+  work_years = int(input("Years working: ") or 40)
+  ret_years = int(input("Years in retirement: ") or 20)
+  start_sal = int(input("Starting salary: ") or 70)
+  end_sal = int(input("Ending salary: ") or 148)
+  #salaries = [70 + 2*i for i in range(work_years)]
+  salaries = np.linspace(start_sal, end_sal, work_years)
   #salaries = [70 for i in range(work_years)]
   keeps = [(0.85-fun.tax_rate(x))*x for x in salaries]
-  apy = 1.05
+  apy = float(input("APY on investments (%): ") or 5) / 100 + 1
 
   #print("Years", "Roth/Yr", "Trad/Yr", "Tot/Yr", "Tax")
   ret_tot = []
@@ -40,11 +55,11 @@ def trial_3():
     trad *= 1 - fun.tax_rate(trad / ret_years) #* ret_years math mistake
 
     ret_tot.append(roth+trad)
-    print(repr(i).rjust(3), repr(round(roth/ret_years, 1)).rjust(6), \
-          repr(round(trad/ret_years, 1)).rjust(6), \
-          repr(round((roth+trad)/ret_years, 1)).rjust(6), \
-          repr(round(fun.tax_rate(trad/ret_years), 3)).rjust(5) \
-          )
+    #print(repr(i).rjust(3), repr(round(roth/ret_years, 1)).rjust(6), \
+    #      repr(round(trad/ret_years, 1)).rjust(6), \
+    #      repr(round((roth+trad)/ret_years, 1)).rjust(6), \
+    #      repr(round(fun.tax_rate(trad/ret_years), 3)).rjust(5) \
+    #      )
 
   #for i in range(work_years):
   #  print(repr(i).rjust(3), repr(round(salaries[i], 1)).rjust(6), \
@@ -99,4 +114,4 @@ def trial_4():
 if __name__=="__main__":
       
   trial_3()
-  trial_4()
+  #trial_4()
