@@ -1,3 +1,5 @@
+import tax_calculator as tx
+
 def brackets(thousands=True):
   cutoffs = [10, 50, 100, 150, 1000]
   rates   = [ 0, .1,  .2,  .3, .4]
@@ -20,6 +22,7 @@ def invest(principle):
 #----------------------------------------------------
 
 def tax_rate(income):
+  return tx.tax_rate(income)
   if income == 0:
     return 0
   rates = brackets()
@@ -37,13 +40,22 @@ def tax_rate(income):
   #    return rates[x]          # Returns None of income>highest bracket
 
 def contribution(income, keep, roth=True):
+  roth_cont = income * (1 - tax_rate(income)) - keep
   if roth:
-    return income * (1 - tax_rate(income)) - keep
+    #return income * (1 - tax_rate(income)) - keep
+    return roth_cont
   else:
-    return (income * (1 - tax_rate(income)) - keep) / (1 - tax_rate(income))
+    #return (income * (1 - tax_rate(income)) - keep) / (1 - tax_rate(income))
+    #return roth_cont / (1 - tax_rate(income - roth_cont))
+    return roth_cont / (1 - tax_rate(income))
 
 #def account_bal(P, apy, years):
   #return P * apy**years
+def discrepancy(income, keep):
+  roth_keep = income - contribution(income, keep) - tx.tax_calc(income)
+  trad_cont = contribution(income, keep, roth=False)
+  trad_keep = income - trad_cont - tx.tax_calc(income-trad_cont)
+  return roth_keep - trad_keep
 
 def account_bal(salary_arr, keep_arr, years, apy=1.05, roth=True):
   tot = 0
