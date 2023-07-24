@@ -63,7 +63,6 @@ def trial_3(work_years, ret_years, start_sal, end_sal, apy, normalize=False):
   salaries = np.linspace(start_sal, end_sal, work_years)
   keeps = [(0.85-fun.tax_rate(x))*x for x in salaries] # Check math
   ret_tot = []
-  #normalize = False       # Normalize resutls to compare different APYs
   
   for i in range(0, work_years+1):
     roth = fun.account_bal(salaries[:i], keeps[:i], i, apy=apy)
@@ -75,24 +74,15 @@ def trial_3(work_years, ret_years, start_sal, end_sal, apy, normalize=False):
     trad *= 1 - fun.tax_rate(trad / ret_years) #* ret_years math mistake
 
     ret_tot.append(roth+trad)
-    #print(repr(i).rjust(3), repr(round(roth/ret_years, 1)).rjust(6), \
-    #      repr(round(trad/ret_years, 1)).rjust(6), \
-    #      repr(round((roth+trad)/ret_years, 1)).rjust(6), \
-    #      repr(round(fun.tax_rate(trad/ret_years), 3)).rjust(5) \
-    #      )
 
-  #for i in range(work_years):
-  #  print(repr(i).rjust(3), repr(round(salaries[i], 1)).rjust(6), \
-  #        repr(round(keeps[i], 1)).rjust(6), \
-  #        repr(round(fun.contribution(salaries[i], keeps[i]), 1)).rjust(6), \
-  #        repr(round(fun.contribution(salaries[i], keeps[i], roth=False), \
-  #        1)).rjust(6) \
-  #        )
+  print_results(ret_tot, ret_years, normalize)
 
-  trial3_results(ret_tot, ret_years, normalize)
+  if normalize:
+    return [x / max(ret_tot) for x in ret_tot]
+  yearly_ret = [x / ret_years for x in ret_tot]
+  return yearly_ret
 
 def trial_4(work_years, ret_years, start_sal, end_sal, apy, normalize=False):
-  
   # Check if thousands=True in fun
   salaries = np.linspace(start_sal, end_sal, work_years)
   keeps = [(0.85-fun.tax_rate(x))*x for x in salaries]
@@ -108,41 +98,17 @@ def trial_4(work_years, ret_years, start_sal, end_sal, apy, normalize=False):
     trad *= 1 - fun.tax_rate(trad / ret_years) #* ret_years math mistake
     ret_tot.append(roth+trad)
 
-    #print(repr(i).rjust(3), repr(round(roth/ret_years, 1)).rjust(6), \
-    #      repr(round(trad/ret_years, 1)).rjust(6), \
-    #      repr(round((roth+trad)/ret_years, 1)).rjust(6), \
-    #      repr(round(fun.tax_rate(trad/ret_years), 3)).rjust(5))
-     
-    trial4_results(ret_tot, ret_years, normalize)
+  print_results(ret_tot, ret_years, normalize)
 
-def trial3_results(ret_tot, ret_years, normalize):
+  if normalize:
+    return [x / max(ret_tot) for x in ret_tot]
   yearly_ret = [x / ret_years for x in ret_tot]
-  print(ret_tot.index(max(ret_tot)), ret_tot.index(min(ret_tot)))
-  print(max(ret_tot), min(ret_tot))
-  print(max(ret_tot)/ret_years, min(ret_tot)/ret_years)
-  if normalize:
-    return [x / max(ret_tot) for x in ret_tot]
-  return yearly_ret #TODO: plot code below before returning?
-  #plt.plot(np.arange(0,work_years+1,1), ret_tot)
-  plt.plot(np.arange(0,work_years+1,1), yearly_ret)
-  plt.title("Roth for x Years Followed by Trad")
-  plt.xlabel("Years into Roth")
-  plt.show()
-  # Check for discrepancies between kept amounts.
+  return yearly_ret
 
-def trial4_results(ret_tot, ret_years, normalize):
+def print_results(ret_tot, ret_years, normalize):
   print(ret_tot.index(max(ret_tot)), ret_tot.index(min(ret_tot)))
   print(max(ret_tot), min(ret_tot))
   print(max(ret_tot)/ret_years, min(ret_tot)/ret_years)
-  yearly_ret = [x/ret_years for x in ret_tot]
-  if normalize:
-    return [x / max(ret_tot) for x in ret_tot]
-  return yearly_ret #TODO: plot code below before returning?
-  plt.plot(np.arange(0,work_years+1,1), yearly_ret)
-  #plt.plot(np.arange(0,work_years+1,1), ret_tot)
-  plt.title("Trad for x Years Followed by Roth")
-  plt.xlabel("Years into Trad")
-  plt.show()
 
 def plot_plan(plans):
   for y in plans:
