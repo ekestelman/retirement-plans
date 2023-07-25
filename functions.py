@@ -1,5 +1,8 @@
 import tax_calculator as tx
 
+contribution_lim = 22500
+catchup_bonus = 7500
+
 def brackets(thousands=True):
   cutoffs = [10, 50, 100, 150, 1000]
   rates   = [ 0, .1,  .2,  .3, .4]
@@ -43,11 +46,11 @@ def contribution(income, keep, roth=True):
   roth_cont = income * (1 - tax_rate(income)) - keep
   if roth:
     #return income * (1 - tax_rate(income)) - keep
-    return roth_cont
+    return min(roth_cont, contribution_lim)
   else:
     #return (income * (1 - tax_rate(income)) - keep) / (1 - tax_rate(income))
     #return roth_cont / (1 - tax_rate(income - roth_cont))
-    return roth_cont / (1 - tax_rate(income))
+    return min(roth_cont / (1 - tax_rate(income)), contribution_lim)
 
 #def account_bal(P, apy, years):
   #return P * apy**years

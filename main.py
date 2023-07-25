@@ -12,6 +12,10 @@ import tax_calculator as tx
 # Show multiple axes for different salaries, multiple graphs on each
 # for diff APYs.
 
+#contribution_lim = 22500
+#catchup_bonus = 7500      # Switch from asking time working to ages working, then
+#                          # determine limit
+
 def check_discrepancy():
   print("Salary|RCont|TCont|RKeep|TKeep|DKeep|Tax Saved|DCont")
   for i in range(20, 320, 20):
@@ -52,8 +56,8 @@ def get_vals():
         "of years working.")
   work_years = int(input("Years working: ") or 40)
   ret_years = int(input("Years in retirement: ") or 20)
-  start_sal = int(input("Starting salary: ") or 70)*1000
-  end_sal = int(input("Ending salary: ") or 148)*1000
+  start_sal = int(input("Starting salary (thousands of dollars): ") or 70)*1000
+  end_sal = int(input("Ending salary (thousands of dollars): ") or 148)*1000
   apy = float(input("APY on investments (%): ") or 5) / 100 + 1
   normalize = bool(input("Normalize curves? 1=Yes, 0=No: ") or False)
   return work_years, ret_years, start_sal, end_sal, apy, normalize
@@ -70,7 +74,7 @@ def trial_3(work_years, ret_years, start_sal, end_sal, apy, normalize=False):
     roth *= apy**(work_years-i)    # -1?
     trad = fun.account_bal(salaries[i:], keeps[i:], work_years-i, apy=apy, \
            roth=False)
-    temp_trad = trad
+    #temp_trad = trad
     #trad -= trad * fun.tax_rate(trad / ret_years) #* ret_years math mistake
     trad *= 1 - fun.tax_rate(trad / ret_years) #* ret_years math mistake
 
@@ -114,7 +118,7 @@ def trial_4(work_years, ret_years, start_sal, end_sal, apy, normalize=False):
     #roth += roth * apy**(work_years-i)
     trad = fun.account_bal(salaries[:i], keeps[:i], i, apy=apy, roth=False)
     trad *= apy**(work_years-i)  # -1 ?
-    temp_trad = trad
+    #temp_trad = trad
     #trad -= trad * fun.tax_rate(trad / ret_years) #* ret_years math mistake
     trad *= 1 - fun.tax_rate(trad / ret_years) #* ret_years math mistake
     ret_tot.append(roth+trad)
