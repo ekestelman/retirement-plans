@@ -52,32 +52,25 @@ def trial_2():
   print(retirement)
 
 def get_vals():
+  vals = {"work years" : 40,
+          "ret years" : 20,
+          "start sal" : 70*1000,
+          "end sal" : 148*1000,
+          "apy" : 5 / 100 + 1,
+          "normalize" : False
+          }
   if sys.argv[-1] == 'd':
-    work_years = 40
-    ret_years = 20
-    start_sal = 70*1000
-    end_sal = 148*1000
-    apy = 5 / 100 + 1
-    normalize = False
-  else:
+    #return [vals[x] for x in vals] # Not here because still want to save hist
+    pass    # Pointless if: pass?
+  else:   # else not necessary after previous return
     try:
-      with open("history.txt") as f: # Error if program has not been run before?
+      with open("history.txt") as f:
         vals = json.load(f)
     except FileNotFoundError:
-      vals = {"work years" : 40,
-              "ret years" : 20,
-              "start sal" : 70*1000,
-              "end sal" : 148*1000,
-              "apy" : 5 / 100 + 1,
-              "normalize" : False
-              }
+      pass
   if sys.argv[-1] == 'p':
-    work_years = vals["work years"]
-    ret_years = vals["ret years"]
-    start_sal = vals["start sal"]
-    end_sal = vals["end sal"]
-    apy = vals["apy"]
-    normalize = vals["normalize"]
+    #return [vals[x] for x in vals] # No need to re-save hist
+    pass
   elif len(sys.argv)==1:
                                             # Check if thousands=True in fun
     print("Yearly salary will be computed as increasing linearly from \n" \
@@ -99,16 +92,17 @@ def get_vals():
       normalize = True
     elif normalize == 'n':
       normalize = False
-  vals = {"work years" : work_years,
-          "ret years" : ret_years,
-          "start sal" : start_sal,
-          "end sal" : end_sal,
-          "apy" : apy,
-          "normalize" : normalize
-          }
+    vals = {"work years" : work_years,
+            "ret years" : ret_years,
+            "start sal" : start_sal,
+            "end sal" : end_sal,
+            "apy" : apy,
+            "normalize" : normalize
+            }
   with open("history.txt", 'w') as f:    # Not necessary if argv[-1]=='p'
     json.dump(vals, f)
-  return work_years, ret_years, start_sal, end_sal, apy, normalize
+  #return work_years, ret_years, start_sal, end_sal, apy, normalize
+  return [vals[x] for x in vals]
 
 def trial_3(work_years, ret_years, start_sal, end_sal, apy, normalize=False):
   #print("Years", "Roth/Yr", "Trad/Yr", "Tot/Yr", "Tax")
