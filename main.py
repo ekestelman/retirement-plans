@@ -2,6 +2,8 @@ import functions as fun
 import numpy as np
 import matplotlib.pyplot as plt
 import tax_calculator as tx
+import json
+import sys
 
 # Consider change if accounts are maxed out
 # Allow for fixing one value and determining others (e.g., fix
@@ -50,16 +52,62 @@ def trial_2():
   print(retirement)
 
 def get_vals():
-                                          # Check if thousands=True in fun
-  print("Yearly salary will be computed as increasing linearly from \n" \
-        "starting salary to ending salary over the course of number \n" \
-        "of years working.")
-  work_years = int(input("Years working: ") or 40)
-  ret_years = int(input("Years in retirement: ") or 20)
-  start_sal = int(input("Starting salary (thousands of dollars): ") or 70)*1000
-  end_sal = int(input("Ending salary (thousands of dollars): ") or 148)*1000
-  apy = float(input("APY on investments (%): ") or 5) / 100 + 1
-  normalize = bool(input("Normalize curves? 1=Yes, 0=No: ") or False)
+  if sys.argv[-1] == 'd':
+    work_years = 40
+    ret_years = 20
+    start_sal = 70*1000
+    end_sal = 148*1000
+    apy = 5 / 100 + 1
+    normalize = False
+  else:
+    try:
+      with open("history.txt") as f: # Error if program has not been run before?
+        vals = json.load(f)
+    except FileNotFoundError:
+      vals = {"work years" : 40,
+              "ret years" : 20,
+              "start sal" : 70*1000,
+              "end sal" : 148*1000,
+              "apy" : 5 / 100 + 1,
+              "normalize" : False
+              }
+  if sys.argv[-1] == 'p':
+    work_years = vals["work years"]
+    ret_years = vals["ret years"]
+    start_sal = vals["start sal"]
+    end_sal = vals["end sal"]
+    apy = vals["apy"]
+    normalize = vals["normalize"]
+  elif len(sys.argv)==1:
+                                            # Check if thousands=True in fun
+    print("Yearly salary will be computed as increasing linearly from \n" \
+          "starting salary to ending salary over the course of number \n" \
+          "of years working.")
+    work_years = int(input("Years working: ") or vals["work years"])
+    ret_years = int(input("Years in retirement: ") or vals["ret years"])
+    start_sal = int(input("Starting salary (thousands of dollars): ") or \
+                vals["start sal"]/1000)*1000
+    end_sal = int(input("Ending salary (thousands of dollars): ") or \
+              vals["end sal"]/1000)*1000
+    apy = float(input("APY on investments (%): ") or \
+          (vals["apy"]-1)*100) / 100 + 1
+    #normalize = bool(input("Normalize curves? 1=Yes, 0=No: ") or \
+    #            vals["normalize"])   # Doesn't work as intended
+    normalize = input("Normalize curves? (y/n): ") or \
+                vals["normalize"]
+    if normalize == 'y':
+      normalize = True
+    elif normalize == 'n':
+      normalize = False
+  vals = {"work years" : work_years,
+          "ret years" : ret_years,
+          "start sal" : start_sal,
+          "end sal" : end_sal,
+          "apy" : apy,
+          "normalize" : normalize
+          }
+  with open("history.txt", 'w') as f:    # Not necessary if argv[-1]=='p'
+    json.dump(vals, f)
   return work_years, ret_years, start_sal, end_sal, apy, normalize
 
 def trial_3(work_years, ret_years, start_sal, end_sal, apy, normalize=False):
