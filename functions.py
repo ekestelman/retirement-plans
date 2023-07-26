@@ -43,7 +43,8 @@ def tax_rate(income):
   #    return rates[x]          # Returns None of income>highest bracket
 
 def contribution(income, keep, roth=True):
-  roth_cont = income * (1 - tax_rate(income)) - keep
+  #roth_cont = income * (1 - tax_rate(income)) - keep
+  roth_cont = keep    # Misnamed to avoid edits, keep=cont
   if roth:
     #return income * (1 - tax_rate(income)) - keep
     return min(roth_cont, contribution_lim)
