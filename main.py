@@ -64,6 +64,9 @@ def get_vals():
   if sys.argv[-1] == 'd':
     #return [vals[x] for x in vals] # Not here because still want to save hist
     pass    # Pointless if: pass? Not pointless if 'd' because else clause
+  elif sys.argv[1] == 'use':     # Instead of "use" simply try?
+    with open(sys.argv[2]) as f:
+      vals = json.load(f)
   else:   # else not necessary after previous return, YES necessary if 'd'
     try:
       with open("history.txt") as f:
@@ -118,6 +121,7 @@ def trial_3(work_years, ret_years, start_sal, end_sal, apy, normalize=False, \
     roth *= apy**(work_years-i)    # -1?
     priv = fun.account_bal(salaries[i:], excess[i:], work_years-i, apy=apy, \
            roth=True)
+    priv -= (priv - sum(excess)) * .15    # Assume 15% capital gains tax
     trad = fun.account_bal(salaries[i:], keeps[i:], work_years-i, apy=apy, \
            roth=False)
     #temp_trad = trad
@@ -172,6 +176,7 @@ def trial_4(work_years, ret_years, start_sal, end_sal, apy, normalize=False, \
     priv = fun.account_bal(salaries[:i], excess[:i], i, apy=apy, roth=True)
     trad = fun.account_bal(salaries[:i], keeps[:i], i, apy=apy, roth=False)
     priv *= apy**(work_years-i)  # -1 ?
+    priv -= (priv - sum(excess)) * .15    # Assume 15% capital gains tax
     trad *= apy**(work_years-i)  # -1 ?
     #temp_trad = trad
     #trad -= trad * fun.tax_rate(trad / ret_years) #* ret_years math mistake
