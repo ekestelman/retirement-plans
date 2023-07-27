@@ -2,7 +2,10 @@ import functions as fun
 import numpy as np
 import matplotlib.pyplot as plt
 import tax_calculator as tx
+import json
+import sys
 
+# Trick for testing: opposite endpoints of each graph should be equal
 # Consider change if accounts are maxed out
 # Allow for fixing one value and determining others (e.g., fix
 # retirement balance and determine contributions.
@@ -11,6 +14,10 @@ import tax_calculator as tx
 # for some sampling of APYs.
 # Show multiple axes for different salaries, multiple graphs on each
 # for diff APYs.
+
+#contribution_lim = 22500
+#catchup_bonus = 7500      # Switch from asking time working to ages working, then
+#                          # determine limit
 
 def check_discrepancy():
   print("Salary|RCont|TCont|RKeep|TKeep|DKeep|Tax Saved|DCont")
@@ -46,57 +53,112 @@ def trial_2():
   print(retirement)
 
 def get_vals():
-                                          # Check if thousands=True in fun
-  print("Yearly salary will be computed as increasing linearly from \n" \
-        "starting salary to ending salary over the course of number \n" \
-        "of years working.")
-  work_years = int(input("Years working: ") or 40)
-  ret_years = int(input("Years in retirement: ") or 20)
-  start_sal = int(input("Starting salary: ") or 70)*1000
-  end_sal = int(input("Ending salary: ") or 148)*1000
-  apy = float(input("APY on investments (%): ") or 5) / 100 + 1
-  normalize = bool(input("Normalize curves? 1=Yes, 0=No: ") or False)
-  return work_years, ret_years, start_sal, end_sal, apy, normalize
+  vals = {"work years" : 40,    # Default values
+          "ret years" : 20,
+          "start sal" : 70*1000,
+          "end sal" : 148*1000,
+          "apy" : 1.05,
+          "normalize" : False,
+          "cont" : .1
+          }
+  if sys.argv[-1] == 'd':
+    #return [vals[x] for x in vals] # Not here because still want to save hist
+    pass    # Pointless if: pass? Not pointless if 'd' because else clause
+  elif sys.argv[1] == 'use':     # Instead of "use" simply try?
+    with open(sys.argv[2]) as f:
+      vals = json.load(f)
+  else:   # else not necessary after previous return, YES necessary if 'd'
+    try:
+      with open("history.txt") as f:
+        vals = json.load(f)
+    except FileNotFoundError:
+      pass
+  if sys.argv[-1] == 'p':
+    #return [vals[x] for x in vals] # No need to re-save hist
+    pass
+  elif len(sys.argv)==1:
+                                            # Check if thousands=True in fun
+    print("Yearly salary will be computed as increasing linearly from \n" \
+          "starting salary to ending salary over the course of number \n" \
+          "of years working.")
+    vals["work years"] = int(input("Years working: ") or vals["work years"])
+    vals["ret years"] = int(input("Years in retirement: ") or vals["ret years"])
+    vals["start sal"] = int(input("Starting salary (thousands of dollars): ") or \
+                        vals["start sal"]*.001)*1000
+    vals["end sal"] = int(input("Ending salary (thousands of dollars): ") or \
+                      vals["end sal"]*.001)*1000
+    vals["cont"] = int(input("Percentage of gross income to be invested: ") or \
+                   vals["cont"]) * .01
+    vals["apy"] = float(input("APY on investments (%): ") or \
+                  (vals["apy"]-1)*100) * .01 + 1
+    #normalize = bool(input("Normalize curves? 1=Yes, 0=No: ") or \
+    #            vals["normalize"])   # Doesn't work as intended
+    vals["normalize"] = input("Normalize curves? (y/n): ") or \
+                        vals["normalize"]
+    if vals["normalize"] == 'y':
+      vals["normalize"] = True
+    elif vals["normalize"] == 'n':
+      vals["normalize"] = False
+  with open("history.txt", 'w') as f:    # Not necessary if argv[-1]=='p'
+    json.dump(vals, f)
+  #return work_years, ret_years, start_sal, end_sal, apy, normalize
+  return [vals[x] for x in vals]
 
-def trial_3(work_years, ret_years, start_sal, end_sal, apy, normalize=False):
+def trial_3(work_years, ret_years, start_sal, end_sal, apy, normalize=False, \
+            cont=.1):
   #print("Years", "Roth/Yr", "Trad/Yr", "Tot/Yr", "Tax")
   salaries = np.linspace(start_sal, end_sal, work_years)
-  keeps = [(0.85-fun.tax_rate(x))*x for x in salaries] # Check math
+  #keeps = [(0.85-fun.tax_rate(x))*x for x in salaries] # Check math
+  clim = fun.contribution_lim
+  keeps = [min(cont * x, clim) for x in salaries]
+  excess = [max(x / (1 - tx.tax_rate(y)) - clim, 0) for x,y in \
+            zip(keeps, salaries)]
   ret_tot = []
   
   for i in range(0, work_years+1):
     roth = fun.account_bal(salaries[:i], keeps[:i], i, apy=apy)
     roth *= apy**(work_years-i)    # -1?
+    priv = fun.account_bal(salaries[i:], excess[i:], work_years-i, apy=apy, \
+           roth=True)
+    priv -= (priv - sum(excess)) * .15    # Assume 15% capital gains tax
     trad = fun.account_bal(salaries[i:], keeps[i:], work_years-i, apy=apy, \
            roth=False)
-    temp_trad = trad
+    #temp_trad = trad
     #trad -= trad * fun.tax_rate(trad / ret_years) #* ret_years math mistake
     trad *= 1 - fun.tax_rate(trad / ret_years) #* ret_years math mistake
+    ret_tot.append(roth+trad+priv)
 
-    ret_tot.append(roth+trad)
-
-  print_results(ret_tot, ret_years, normalize)
+  print_results(ret_tot, ret_years, normalize)  # Check ret_tot[0] and ret_tot[-1]
 
   if normalize:
     return [x / max(ret_tot) for x in ret_tot]
   yearly_ret = [x / ret_years for x in ret_tot]
   return yearly_ret
 
-def trial_4(work_years, ret_years, start_sal, end_sal, apy, normalize=False):
+def trial_4(work_years, ret_years, start_sal, end_sal, apy, normalize=False, \
+            cont=.1):  # Can set default args here instead of get_vals()
   # Check if thousands=True in fun
   salaries = np.linspace(start_sal, end_sal, work_years)
-  keeps = [(0.85-fun.tax_rate(x))*x for x in salaries]
+  #keeps = [(0.85-fun.tax_rate(x))*x for x in salaries]
+  #keeps = [cont * x for x in salaries]
+  clim = fun.contribution_lim
+  keeps = [min(cont * x, clim) for x in salaries]
+  excess = [max(x / (1 - tx.tax_rate(y)) - clim, 0) for x,y in \
+            zip(keeps, salaries)]
   ret_tot = []
   
   for i in range(0, work_years+1):
     roth = fun.account_bal(salaries[i:], keeps[i:], work_years-i, apy=apy)
     #roth += roth * apy**(work_years-i)
+    priv = fun.account_bal(salaries[:i], excess[:i], i, apy=apy, roth=True)
     trad = fun.account_bal(salaries[:i], keeps[:i], i, apy=apy, roth=False)
+    priv *= apy**(work_years-i)  # -1 ?
+    priv -= (priv - sum(excess)) * .15    # Assume 15% capital gains tax
     trad *= apy**(work_years-i)  # -1 ?
-    temp_trad = trad
+    #temp_trad = trad
     #trad -= trad * fun.tax_rate(trad / ret_years) #* ret_years math mistake
     trad *= 1 - fun.tax_rate(trad / ret_years) #* ret_years math mistake
-    ret_tot.append(roth+trad)
+    ret_tot.append(roth+trad+priv)
 
   print_results(ret_tot, ret_years, normalize)
 
