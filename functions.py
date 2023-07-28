@@ -62,6 +62,7 @@ def discrepancy(income, keep):
   return roth_keep - trad_keep
 
 def account_bal(salary_arr, keep_arr, years, apy=1.05, roth=True):
+  # Is years necessary? Doesn't years have to be len(arr)?
   tot = 0
   for i in range(years):
     tot += contribution(salary_arr[i], keep_arr[i], roth) * apy**(years-i)

@@ -5,20 +5,6 @@ import tax_calculator as tx
 import json
 import sys
 
-# Trick for testing: opposite endpoints of each graph should be equal
-# Consider change if accounts are maxed out
-# Allow for fixing one value and determining others (e.g., fix
-# retirement balance and determine contributions.
-# Consider making a table or 3d plot to compare multiple variables
-# at a time, such as different APYs. Can also plot multiple graphs
-# for some sampling of APYs.
-# Show multiple axes for different salaries, multiple graphs on each
-# for diff APYs.
-
-#contribution_lim = 22500
-#catchup_bonus = 7500      # Switch from asking time working to ages working, then
-#                          # determine limit
-
 def check_discrepancy():
   print("Salary|RCont|TCont|RKeep|TKeep|DKeep|Tax Saved|DCont")
   for i in range(20, 320, 20):
@@ -52,7 +38,7 @@ def trial_2():
   
   print(retirement)
 
-def get_vals():
+def get_vals(dic=False):
   vals = {"work years" : 40,    # Default values
           "ret years" : 20,
           "start sal" : 70*1000,
@@ -102,6 +88,8 @@ def get_vals():
   with open("history.txt", 'w') as f:    # Not necessary if argv[-1]=='p'
     json.dump(vals, f)
   #return work_years, ret_years, start_sal, end_sal, apy, normalize
+  if dic:
+    return vals
   return [vals[x] for x in vals]
 
 def trial_3(work_years, ret_years, start_sal, end_sal, apy, normalize=False, \
@@ -111,8 +99,9 @@ def trial_3(work_years, ret_years, start_sal, end_sal, apy, normalize=False, \
   #keeps = [(0.85-fun.tax_rate(x))*x for x in salaries] # Check math
   clim = fun.contribution_lim
   keeps = [min(cont * x, clim) for x in salaries]
-  excess = [max(x / (1 - tx.tax_rate(y)) - clim, 0) for x,y in \
-            zip(keeps, salaries)]
+  excess = [max(x * (1 + tx.tax_rate(y)) - clim, 0) for x,y in \
+            zip(keeps, salaries)]  # Can this be more efficient?
+                                   # Necessary if roth<clim<trad?
   ret_tot = []
   
   for i in range(0, work_years+1):
@@ -143,7 +132,7 @@ def trial_4(work_years, ret_years, start_sal, end_sal, apy, normalize=False, \
   #keeps = [cont * x for x in salaries]
   clim = fun.contribution_lim
   keeps = [min(cont * x, clim) for x in salaries]
-  excess = [max(x / (1 - tx.tax_rate(y)) - clim, 0) for x,y in \
+  excess = [max(x * (1 + tx.tax_rate(y)) - clim, 0) for x,y in \
             zip(keeps, salaries)]
   ret_tot = []
   
@@ -167,10 +156,46 @@ def trial_4(work_years, ret_years, start_sal, end_sal, apy, normalize=False, \
   yearly_ret = [x / ret_years for x in ret_tot]
   return yearly_ret
 
+def ret_plan(vals, roth):  # roth takes value 1 or 2 to indicate 1st or 2nd
+  salaries = np.linspace(vals["start sal"], vals["end sal"], vals["work years"])
+                # Better to do this in get_vals()?
+  clim = fun.contribution_lim
+  cont = [min(vals["cont"] * x, clim) for x in salaries]
+  excess = [max(x * (1 + tx.tax_rate(y)) - clim, 0) for x,y in \
+            zip(cont, salaries)]  # Really only have to compute this for trad yrs
+  ret_tot = []
+  acct = [None, None, None]
+  for i in range(0, vals["work years"]+1):
+    acct[1] = fun.account_bal(salaries[:i], cont[:i], i, \
+                              vals["apy"], roth==1)#first=="roth")
+                              # roth==1 true for roth, false for trad first
+    acct[2] = fun.account_bal(salaries[i:], cont[i:], vals["work years"]-i, \
+                              vals["apy"], roth==2)#first=="trad")
+                              # roth==2 false for trad, true for roth second
+    acct[1] *= vals["apy"]**(vals["work years"]-i)
+                              # Continued growth from first account
+    if roth==1:
+      acct[0] = fun.account_bal(salaries[i:], excess[i:], vals["work years"]-i, \
+                                vals["apy"], roth=True)
+      acct[2] *= 1 - fun.tax_rate(acct[2] / vals["ret years"])
+    else:
+      acct[0] = fun.account_bal(salaries[:i], excess[:i], i, \
+                                vals["apy"], roth=True)
+      acct[0] *= vals["apy"]**(vals["work years"]-i)
+      acct[1] *= 1 - fun.tax_rate(acct[1] / vals["ret years"])
+    acct[0] -= (acct[0] - sum(excess)) * .15
+    ret_tot.append(sum(acct))
+  print_results(ret_tot, vals["ret years"], vals["normalize"])
+  if vals["normalize"]:
+    return [x / max(ret_tot) for x in ret_tot]
+  yearly_ret = [x / vals["ret years"] for x in ret_tot]
+  return yearly_ret
+
 def print_results(ret_tot, ret_years, normalize):
   print(ret_tot.index(max(ret_tot)), ret_tot.index(min(ret_tot)))
-  print(max(ret_tot), min(ret_tot))
+  #print(max(ret_tot), min(ret_tot))
   print(max(ret_tot)/ret_years, min(ret_tot)/ret_years)
+  #print(ret_tot[0], ret_tot[-1])  # Sanity check
 
 def plot_plan(plans):
   for y in plans:
@@ -192,8 +217,22 @@ def compare_comp():
 if __name__=="__main__":
       
   #normalize = False
-  args = get_vals()
-  plans = [trial_3(*args), trial_4(*args)]#, trial_3(*args[:4], 1.07)]
+  plans = []
+  if 1:
+    args = get_vals(True)
+    #plans = [ret_plan(args, 1)[0], ret_plan(args, 2)[0]]
+    rfirst = ret_plan(args, 1)
+    tfirst = ret_plan(args, 2)
+    #plans = [rfirst[0], tfirst[0]]
+    plans.append(rfirst)
+    plans.append(tfirst)
+    if not (rfirst[0]==tfirst[-1] and rfirst[-1]==tfirst[0]): # Sanity check
+      print("Something's wrong! Please contact the author :)")
+  if 0:
+    args = get_vals()
+    #plans = [trial_3(*args), trial_4(*args)]#, trial_3(*args[:4], 1.07)]
+    plans.append(trial_3(*args))
+    plans.append(trial_4(*args))
   if 0:
     plans = [trial_3(*args), trial_4(*args), trial_3(*args[:4], 1.07, args[5]), \
              trial_4(*args[:4], 1.07, args[5]), \
