@@ -45,12 +45,14 @@ def get_vals(dic=False):
           "end sal" : 148*1000,
           "apy" : 1.05,
           "normalize" : False,
-          "cont" : .1
+          "cont" : .1,
+          "ret apy" : 1.03
           }
   if sys.argv[-1] == 'd':
     #return [vals[x] for x in vals] # Not here because still want to save hist
     pass    # Pointless if: pass? Not pointless if 'd' because else clause
-  elif sys.argv[1] == 'use':     # Instead of "use" simply try?
+  # ERROR IF NO ARGS
+  elif len(sys.argv)!=1 and sys.argv[1] == 'use':     # Instead of "use" simply try?
     with open(sys.argv[2]) as f:
       vals = json.load(f)
   else:   # else not necessary after previous return, YES necessary if 'd'
@@ -74,8 +76,10 @@ def get_vals(dic=False):
     vals["end sal"] = int(input("Ending salary (thousands of dollars): ") or \
                       vals["end sal"]*.001)*1000
     vals["cont"] = int(input("Percentage of gross income to be invested: ") or \
-                   vals["cont"]) * .01
+                   vals["cont"]*100) * .01
     vals["apy"] = float(input("APY on investments (%): ") or \
+                  (vals["apy"]-1)*100) * .01 + 1
+    vals["ret apy"] = float(input("APY during retirement (%): ") or \
                   (vals["apy"]-1)*100) * .01 + 1
     #normalize = bool(input("Normalize curves? 1=Yes, 0=No: ") or \
     #            vals["normalize"])   # Doesn't work as intended
@@ -156,7 +160,7 @@ def trial_4(work_years, ret_years, start_sal, end_sal, apy, normalize=False, \
   yearly_ret = [x / ret_years for x in ret_tot]
   return yearly_ret
 
-def ret_plan(vals, roth):  # roth takes value 1 or 2 to indicate 1st or 2nd
+def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   salaries = np.linspace(vals["start sal"], vals["end sal"], vals["work years"])
                 # Better to do this in get_vals()?
   clim = fun.contribution_lim
@@ -165,29 +169,85 @@ def ret_plan(vals, roth):  # roth takes value 1 or 2 to indicate 1st or 2nd
             zip(cont, salaries)]  # Really only have to compute this for trad yrs
   ret_tot = []
   acct = [None, None, None]
+  all_accts = {"roth" : [], "trad" : [], "priv" : []}
   for i in range(0, vals["work years"]+1):
     acct[1] = fun.account_bal(salaries[:i], cont[:i], i, \
-                              vals["apy"], roth==1)#first=="roth")
+                              vals["apy"], rothorder==1)#first=="roth")
                               # roth==1 true for roth, false for trad first
     acct[2] = fun.account_bal(salaries[i:], cont[i:], vals["work years"]-i, \
-                              vals["apy"], roth==2)#first=="trad")
+                              vals["apy"], rothorder==2)#first=="trad")
                               # roth==2 false for trad, true for roth second
     acct[1] *= vals["apy"]**(vals["work years"]-i)
                               # Continued growth from first account
-    if roth==1:
+    #distr1 = acct[1] * vals["ret apy"] ** vals["ret years"] / \
+    #         fun.summation(fun.exponentiate, 0, vals["ret years"]-1, \
+    #                       vals["ret apy"])
+    #distr2 = acct[2] * vals["ret apy"] ** vals["ret years"] / \
+    #         fun.summation(fun.exponentiate, 0, vals["ret years"]-1, \
+    #                       vals["ret apy"])
+    #distr0 = acct[0] * vals["ret apy"] ** vals["ret years"] / \
+    #         fun.summation(fun.exponentiate, 0, vals["ret years"]-1, \
+    #                       vals["ret apy"])
+    # Better to rename accts with roth/trad naming?
+    if rothorder==1:
+      roth = acct[1]      # Consider better var names
+      trad = acct[2]
+      # acct[0] is private brokerage acct
       acct[0] = fun.account_bal(salaries[i:], excess[i:], vals["work years"]-i, \
                                 vals["apy"], roth=True)
-      acct[2] *= 1 - fun.tax_rate(acct[2] / vals["ret years"])
+      #acct[2] *= 1 - fun.tax_rate(acct[2] / vals["ret years"])
     else:
+      trad = acct[1]
+      roth = acct[2]
       acct[0] = fun.account_bal(salaries[:i], excess[:i], i, \
                                 vals["apy"], roth=True)
       acct[0] *= vals["apy"]**(vals["work years"]-i)
-      acct[1] *= 1 - fun.tax_rate(acct[1] / vals["ret years"])
-    acct[0] -= (acct[0] - sum(excess)) * .15
-    ret_tot.append(sum(acct))
-  print_results(ret_tot, vals["ret years"], vals["normalize"])
+      #acct[1] *= 1 - fun.tax_rate(acct[1] / vals["ret years"])
+    ret_growth_factor = vals["ret apy"] ** vals["ret years"] / \
+                        fun.summation(fun.exponentiate, 0, \
+                        vals["ret years"]-1, vals["ret apy"])
+                        # Growth factor already determines yearly distribution
+    #ret_growth_factor = 1
+    #if i == 11:
+    #  print(roth, trad, acct[0])
+    roth *= ret_growth_factor
+    trad *= ret_growth_factor
+    #acct[0] *= ret_growth_factor  # Questionable because selling and reinvesting
+                                  # would incur tax
+    #if i == 11:
+    #  print(roth, trad, acct[0])
+    old_method = False
+    #if ret_growth_factor == 1:   # Bug when ret apy = 1
+    if old_method:
+      trad *= 1 - fun.tax_rate(trad / vals["ret years"])
+      #acct[0] -= (acct[0] - sum(excess)) * .15
+    else:
+      trad *= 1 - fun.tax_rate(trad)
+      #acct[0] *= .9   # VERY rough approx for now
+      # Challenge to calculate because profit keeps going up over time
+    # Assume no growth on priv in retirement
+    acct[0] -= (acct[0] - sum(excess)) * .15 
+    if ret_growth_factor != 1:
+      acct[0] /= vals["ret years"]
+      # If priv isn't treated with growth factor, it must be divided
+    #if i == 11:
+    #  print(roth, trad, acct[0])
+    #ret_tot.append(sum(acct))
+    ret_tot.append(roth + trad + acct[0])
+    #all_accts.append({"roth" : roth, "trad" : trad, "priv" : acct[0]})
+    all_accts["roth"].append(roth)
+    all_accts["trad"].append(trad)
+    all_accts["priv"].append(acct[0])
+  #print_results(ret_tot, vals["ret years"], vals["normalize"])
   if vals["normalize"]:
     return [x / max(ret_tot) for x in ret_tot]
+    # ret_tot may be obsolete once we account for growth in retirement, since
+    # growth affects yearly ret which affects tax rate which affects ret_tot.
+    # It doesn't make so much sense to think of "total" funds after tax if tax
+    # is paid based on yearly, not total, funds.
+  if ret_growth_factor != 1:
+    #return all_accts
+    return ret_tot, all_accts
   yearly_ret = [x / vals["ret years"] for x in ret_tot]
   return yearly_ret
 
@@ -221,11 +281,29 @@ if __name__=="__main__":
   if 1:
     args = get_vals(True)
     #plans = [ret_plan(args, 1)[0], ret_plan(args, 2)[0]]
-    rfirst = ret_plan(args, 1)
-    tfirst = ret_plan(args, 2)
+    rfirst, rcomp = ret_plan(args, 1)
+    tfirst, tcomp = ret_plan(args, 2)
+    #rcomp = rfirst[1]  # Roth first components
+    #tcomp = tfirst[1]  # Trad first components
+    #rfirst = rfirst[0]
+    #tfirst = tfirst[0]
+    #rtots = [sum(x.values()) for x in rfirst]
+    #ttots = [sum(x.values()) for x in tfirst]
+    #rtots = [sum(x[i]) for x in rfirst for i in range(len(x))]
+    #ttots = [sum(x[i]) for x in tfirst for i in range(len(x))]
     #plans = [rfirst[0], tfirst[0]]
+    #plans.append(rfirst)
+    #plans.append(tfirst)
     plans.append(rfirst)
     plans.append(tfirst)
+    for x in plans:
+      best = max(x)
+      best_yr = x.index(best)
+      worst = min(x)
+      print("Best:" + str(best_yr).rjust(3) + str(int(best)).rjust(9) + "  ", \
+            "Worst:" + str(int(worst)).rjust(9) + "  ", \
+            "Diff:" + str(int(best-worst)).rjust(9))
+    print("Optimal diff:", int(max(plans[0])-max(plans[1])))
     if not (rfirst[0]==tfirst[-1] and rfirst[-1]==tfirst[0]): # Sanity check
       print("Something's wrong! Please contact the author :)")
   if 0:
@@ -238,6 +316,22 @@ if __name__=="__main__":
              trial_4(*args[:4], 1.07, args[5]), \
              trial_3(*args[:4], 1.1, args[5]), trial_4(*args[:4], 1.1, args[5])]
   plot_plan(plans)
+  #plt.stackplot(np.arange(0, len(rfirst), 1), rcomp.values())
+  #plt.show()
+  fig, axs = plt.subplots(1, 2)
+  axs[0].pie([rcomp["roth"][best_yr], \
+           rcomp["trad"][best_yr], \
+           rcomp["priv"][best_yr]], \
+           labels=["Roth", "Trad", "Private"], autopct='%1.1f%%')
+  axs[0].set_title("Roth first")
+  axs[1].pie([tcomp["roth"][best_yr], \
+           tcomp["trad"][best_yr], \
+           tcomp["priv"][best_yr]], \
+           labels=["Roth", "Trad", "Private"], autopct='%1.1f%%')
+  axs[1].set_title("Trad first")
+  plt.show()
+  #plt.stackplot(np.arange(0, len(tfirst), 1), tcomp.values())
+  #plt.show()
   #trial_3(*args)
   #trial_4(*args)
   #check_discrepancy()

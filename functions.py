@@ -68,10 +68,13 @@ def account_bal(salary_arr, keep_arr, years, apy=1.05, roth=True):
     tot += contribution(salary_arr[i], keep_arr[i], roth) * apy**(years-i)
   return tot
 
-def summation(func, start, stop):
+def summation(func, start, stop, *args):
   tot = 0
   for i in range(start, stop + 1):
-    tot += func(i)
+    tot += func(*args, i)
+  return tot
 
+def exponentiate(base, exponent):
+  return base ** exponent
 
   
