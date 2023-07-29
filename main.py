@@ -227,8 +227,9 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       # Challenge to calculate because profit keeps going up over time
     # Assume no growth on priv in retirement
     acct[0] -= (acct[0] - sum(excess)) * .15 
-    if ret_growth_factor != 1:
-      acct[0] /= vals["ret years"]
+    acct[0] /= vals["ret years"]
+    #if ret_growth_factor != 1:      # This didn't make a difference?
+    #  acct[0] /= vals["ret years"]
       # If priv isn't treated with growth factor, it must be divided
     #if i == 11:
     #  print(roth, trad, acct[0])
@@ -245,7 +246,8 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
     # growth affects yearly ret which affects tax rate which affects ret_tot.
     # It doesn't make so much sense to think of "total" funds after tax if tax
     # is paid based on yearly, not total, funds.
-  if ret_growth_factor != 1:
+  #if ret_growth_factor != 1:
+  if not old_method:
     #return all_accts
     return ret_tot, all_accts
   yearly_ret = [x / vals["ret years"] for x in ret_tot]
@@ -296,9 +298,11 @@ if __name__=="__main__":
     #plans.append(tfirst)
     plans.append(rfirst)
     plans.append(tfirst)
+    best_yrs = []
     for x in plans:
       best = max(x)
       best_yr = x.index(best)
+      best_yrs.append(best_yr)
       worst = min(x)
       print("Best:" + str(best_yr).rjust(3) + str(int(best)).rjust(9) + "  ", \
             "Worst:" + str(int(worst)).rjust(9) + "  ", \
@@ -319,14 +323,15 @@ if __name__=="__main__":
   #plt.stackplot(np.arange(0, len(rfirst), 1), rcomp.values())
   #plt.show()
   fig, axs = plt.subplots(1, 2)
-  axs[0].pie([rcomp["roth"][best_yr], \
-           rcomp["trad"][best_yr], \
-           rcomp["priv"][best_yr]], \
+  # best_yr bad variable
+  axs[0].pie([rcomp["roth"][best_yrs[0]], \
+           rcomp["trad"][best_yrs[0]], \
+           rcomp["priv"][best_yrs[0]]], \
            labels=["Roth", "Trad", "Private"], autopct='%1.1f%%')
   axs[0].set_title("Roth first")
-  axs[1].pie([tcomp["roth"][best_yr], \
-           tcomp["trad"][best_yr], \
-           tcomp["priv"][best_yr]], \
+  axs[1].pie([tcomp["roth"][best_yrs[1]], \
+           tcomp["trad"][best_yrs[1]], \
+           tcomp["priv"][best_yrs[1]]], \
            labels=["Roth", "Trad", "Private"], autopct='%1.1f%%')
   axs[1].set_title("Trad first")
   plt.show()
