@@ -20,8 +20,8 @@ def assign_brackets(vals):
 
   return dic
 
-def tax_calc(salary):
-
+def get_brackets():
+  
   tax_juris = {"fed":{}, "nys":{}, "nyc":{}}
   
   for x in tax_juris:
@@ -31,6 +31,12 @@ def tax_calc(salary):
       vals = f.read().split()
 
     tax_juris[x] = assign_brackets(vals)
+  return tax_juris
+
+tax_juris = get_brackets()
+
+def tax_calc(salary):
+
   
   deduction = {x:y for x, y in zip(tax_juris, [12950, 8000, 8000])}
   taxes = {x:0 for x in tax_juris}
