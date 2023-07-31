@@ -80,7 +80,7 @@ def get_vals(dic=False):
     vals["apy"] = float(input("APY on investments (%): ") or \
                   (vals["apy"]-1)*100) * .01 + 1
     vals["ret apy"] = float(input("APY during retirement (%): ") or \
-                  (vals["apy"]-1)*100) * .01 + 1
+                  (vals["ret apy"]-1)*100) * .01 + 1
     #normalize = bool(input("Normalize curves? 1=Yes, 0=No: ") or \
     #            vals["normalize"])   # Doesn't work as intended
     vals["normalize"] = input("Normalize curves? (y/n): ") or \
@@ -267,11 +267,36 @@ def plot_plan(plans):
     plt.title("Contribute to Roth or Trad for x years, then switch")
   plt.show()
 
-def plot_tax_rates():
-  salaries = np.linspace(20, 800, 1000)
+def plot_tax_rates(*points):
+  #salaries = np.linspace(20, 800, 1000)
+  salaries = np.linspace(0, 200, 1000)   # Set bounds based on income?
   rates = [tx.tax_rate(x*1000) for x in salaries]
   plt.plot(salaries, rates)
+  for p in points:
+    plt.plot(p/1000, tx.tax_rate(p), 'o')
   plt.show()
+
+def plot_pies(*strats):   # Choice in * rather than list?
+  fig, axs = plt.subplots(1, 2)
+  # best_yr bad variable
+  for i in range(len(strats)):
+    axs[i].pie(strats[i].values(), labels=["Roth", "Trad", "Private"], \
+               autopct='%1.1f%%')
+  #axs[0].pie([rcomp["roth"][best_yrs[0]], \
+  #         rcomp["trad"][best_yrs[0]], \
+  #         rcomp["priv"][best_yrs[0]]], \
+  #         labels=["Roth", "Trad", "Private"], autopct='%1.1f%%')
+  axs[0].set_title("Roth first")
+  #axs[1].pie([tcomp["roth"][best_yrs[1]], \
+  #         tcomp["trad"][best_yrs[1]], \
+  #         tcomp["priv"][best_yrs[1]]], \
+  #         labels=["Roth", "Trad", "Private"], autopct='%1.1f%%')
+  axs[1].set_title("Trad first")
+  plt.show()
+  #plot_tax_rates(rcomp["trad"][best_yrs[0]], tcomp["trad"][best_yrs[1]])
+  plot_tax_rates(strats[0]["trad"], strats[1]["trad"])
+              # best_yrs global var?
+              # maybe better choice in args, don't need whole rcomp dic + lists
 
 def compare_comp():
   tax = np.linspace(0, 50, 1000)
@@ -320,21 +345,17 @@ if __name__=="__main__":
              trial_4(*args[:4], 1.07, args[5]), \
              trial_3(*args[:4], 1.1, args[5]), trial_4(*args[:4], 1.1, args[5])]
   plot_plan(plans)
+  rbest = {"roth" : rcomp["roth"][best_yrs[0]],
+           "trad" : rcomp["trad"][best_yrs[0]],
+           "priv" : rcomp["priv"][best_yrs[0]]}
+  tbest = {"roth" : tcomp["roth"][best_yrs[1]],
+           "trad" : tcomp["trad"][best_yrs[1]],
+           "priv" : tcomp["priv"][best_yrs[1]]}
+           # Better way than copy paste...
+  plot_pies(rbest, tbest)
+                # 0 is best roth yr, 1 is best trad yr
   #plt.stackplot(np.arange(0, len(rfirst), 1), rcomp.values())
   #plt.show()
-  fig, axs = plt.subplots(1, 2)
-  # best_yr bad variable
-  axs[0].pie([rcomp["roth"][best_yrs[0]], \
-           rcomp["trad"][best_yrs[0]], \
-           rcomp["priv"][best_yrs[0]]], \
-           labels=["Roth", "Trad", "Private"], autopct='%1.1f%%')
-  axs[0].set_title("Roth first")
-  axs[1].pie([tcomp["roth"][best_yrs[1]], \
-           tcomp["trad"][best_yrs[1]], \
-           tcomp["priv"][best_yrs[1]]], \
-           labels=["Roth", "Trad", "Private"], autopct='%1.1f%%')
-  axs[1].set_title("Trad first")
-  plt.show()
   #plt.stackplot(np.arange(0, len(tfirst), 1), tcomp.values())
   #plt.show()
   #trial_3(*args)
