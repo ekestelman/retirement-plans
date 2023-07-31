@@ -68,6 +68,17 @@ def tax_rate(salary):
     return 0
   return tax_calc(salary) / salary
 
+def cap_gains(cg, sal):
+  cutoffs = [41675, 459750]
+  rates = [0, .15, .2]
+  tot_income = cg + sal
+  tax = 0
+  if tot_income > cutoffs[1]:
+    tax += (tot_income - max(sal, cutoffs[1])) * rates[2]
+  if tot_income > cutoffs[0]:
+    tax += max(0, (min(tot_income, cutoffs[1]) - max(sal, cutoffs[0])) * rates[1])
+  return tax
+
 if __name__ == "__main__":
 
   for i in range(2, 11, 2):
