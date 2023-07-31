@@ -90,7 +90,7 @@ def get_vals(dic=False):
     elif vals["normalize"] == 'n':
       vals["normalize"] = False
   with open("history.txt", 'w') as f:    # Not necessary if argv[-1]=='p'
-    json.dump(vals, f)
+    json.dump(vals, f, indent=2)
   #return work_years, ret_years, start_sal, end_sal, apy, normalize
   if dic:
     return vals
@@ -170,6 +170,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   ret_tot = []
   acct = [None, None, None]
   all_accts = {"roth" : [], "trad" : [], "priv" : []}
+  withdraw = {"trad" : [], "priv" : []}
   for i in range(0, vals["work years"]+1):
     acct[1] = fun.account_bal(salaries[:i], cont[:i], i, \
                               vals["apy"], rothorder==1)#first=="roth")
@@ -222,6 +223,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       trad *= 1 - fun.tax_rate(trad / vals["ret years"])
       #acct[0] -= (acct[0] - sum(excess)) * .15
     else:
+      withdraw["trad"].append(trad)   # For withdrawal instructions
       trad *= 1 - fun.tax_rate(trad)
       #acct[0] *= .9   # VERY rough approx for now
       # Challenge to calculate because profit keeps going up over time
@@ -249,7 +251,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   #if ret_growth_factor != 1:
   if not old_method:
     #return all_accts
-    return ret_tot, all_accts
+    return ret_tot, all_accts, withdraw
   yearly_ret = [x / vals["ret years"] for x in ret_tot]
   return yearly_ret
 
@@ -260,24 +262,36 @@ def print_results(ret_tot, ret_years, normalize):
   #print(ret_tot[0], ret_tot[-1])  # Sanity check
 
 def plot_plan(plans):
+  color_num = 0
   for y in plans:
     plt.plot(np.arange(0, len(y), 1), y, label = "")
+    color = 'C' + str(color_num)
+    plt.hlines(max(y)*.99, 0, len(y), color, ls='--')
+    color_num += 1
     plt.xlabel("Year at which we switch type")
     plt.ylabel("Yearly income in retirement")
     plt.title("Contribute to Roth or Trad for x years, then switch")
   plt.show()
 
-def plot_tax_rates(*points):
-  #salaries = np.linspace(20, 800, 1000)
-  salaries = np.linspace(0, 200, 1000)   # Set bounds based on income?
+def plot_tax_rates(*points, ax, lbound=0, ubound=200):
+  salaries = np.linspace(min(lbound,min(points)/1000), \
+                         max(ubound,max(points)/1000),1000)
   rates = [tx.tax_rate(x*1000) for x in salaries]
-  plt.plot(salaries, rates)
+  ax.plot(salaries, rates)
+  #salaries = np.linspace(20, 800, 1000)
+  salaries = np.linspace(lbound, ubound, 1000)   # Set bounds based on income?
+  rates = [tx.tax_rate(x*1000) for x in salaries]
+  #plt.plot(salaries, rates)
+  ax.plot(salaries, rates)
   for p in points:
-    plt.plot(p/1000, tx.tax_rate(p), 'o')
-  plt.show()
+    #plt.plot(p/1000, tx.tax_rate(p), 'o')
+    ax.plot(p/1000, tx.tax_rate(p), 'o')
+    # This amount is actually after tax! This graph doesn't show what I want.
+  #plt.show()
+  return ax
 
-def plot_pies(*strats):   # Choice in * rather than list?
-  fig, axs = plt.subplots(1, 2)
+def plot_pies(*strats, ubound=200, lbound=0):   # Choice in * rather than list?
+  fig, axs = plt.subplots(1, 3)
   # best_yr bad variable
   for i in range(len(strats)):
     axs[i].pie(strats[i].values(), labels=["Roth", "Trad", "Private"], \
@@ -292,9 +306,11 @@ def plot_pies(*strats):   # Choice in * rather than list?
   #         tcomp["priv"][best_yrs[1]]], \
   #         labels=["Roth", "Trad", "Private"], autopct='%1.1f%%')
   axs[1].set_title("Trad first")
+  plot_tax_rates(strats[0]["trad"], strats[1]["trad"], ax=axs[2], \
+                 ubound=ubound, lbound=lbound)
   plt.show()
   #plot_tax_rates(rcomp["trad"][best_yrs[0]], tcomp["trad"][best_yrs[1]])
-  plot_tax_rates(strats[0]["trad"], strats[1]["trad"])
+  #plot_tax_rates(strats[0]["trad"], strats[1]["trad"])
               # best_yrs global var?
               # maybe better choice in args, don't need whole rcomp dic + lists
 
@@ -308,8 +324,8 @@ if __name__=="__main__":
   if 1:
     args = get_vals(True)
     #plans = [ret_plan(args, 1)[0], ret_plan(args, 2)[0]]
-    rfirst, rcomp = ret_plan(args, 1)
-    tfirst, tcomp = ret_plan(args, 2)
+    rfirst, rcomp, rwithdraw = ret_plan(args, 1)
+    tfirst, tcomp, twithdraw = ret_plan(args, 2)
     #rcomp = rfirst[1]  # Roth first components
     #tcomp = tfirst[1]  # Trad first components
     #rfirst = rfirst[0]
@@ -333,6 +349,9 @@ if __name__=="__main__":
             "Worst:" + str(int(worst)).rjust(9) + "  ", \
             "Diff:" + str(int(best-worst)).rjust(9))
     print("Optimal diff:", int(max(plans[0])-max(plans[1])))
+    print("Yearly trad withdrawal (pretax):", \
+          int(rwithdraw["trad"][best_yrs[0]]), "or", \
+          int(twithdraw["trad"][best_yrs[1]]))
     if not (rfirst[0]==tfirst[-1] and rfirst[-1]==tfirst[0]): # Sanity check
       print("Something's wrong! Please contact the author :)")
   if 0:
@@ -352,7 +371,8 @@ if __name__=="__main__":
            "trad" : tcomp["trad"][best_yrs[1]],
            "priv" : tcomp["priv"][best_yrs[1]]}
            # Better way than copy paste...
-  plot_pies(rbest, tbest)
+  plot_pies(rbest, tbest, lbound=args["start sal"]/1000, \
+            ubound=args["end sal"]/1000)
                 # 0 is best roth yr, 1 is best trad yr
   #plt.stackplot(np.arange(0, len(rfirst), 1), rcomp.values())
   #plt.show()
