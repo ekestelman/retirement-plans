@@ -44,10 +44,13 @@ def tax_calc(salary):
   for x in tax_juris:
     brackets = [y for y in tax_juris[x]]
     i = 0
-    while 0 < brackets[i] < salary-deduction[x]:
+    taxable = max(salary - deduction[x], 0)
+    #while 0 < brackets[i] < salary-deduction[x]:
+    while 0 < brackets[i] < taxable:
       taxes[x] += (brackets[i]-brackets[i-1]) * tax_juris[x][brackets[i]] * .01
       i += 1
-    taxes[x] += (salary-deduction[x] - brackets[i-1]) * \
+    #taxes[x] += (salary-deduction[x] - brackets[i-1]) * \
+    taxes[x] += (taxable - brackets[i-1]) * \
                  tax_juris[x][brackets[i]] * .01
 
   soc_sec = .062 * min(salary, 160200)
