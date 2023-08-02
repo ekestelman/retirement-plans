@@ -79,7 +79,7 @@ def get_vals(dic=False):
                         vals["start sal"]*.001)*1000
     vals["end sal"] = int(input("Ending salary (thousands of dollars): ") or \
                       vals["end sal"]*.001)*1000
-    vals["cont"] = int(input("Percentage of gross income to be invested: ") or \
+    vals["cont"] = int(input("% of gross income to be invested: ") or \
                    vals["cont"]*100) * .01
     vals["apy"] = float(input("APY on investments (%): ") or \
                   (vals["apy"]-1)*100) * .01 + 1
@@ -89,9 +89,13 @@ def get_vals(dic=False):
     #            vals["normalize"])   # Doesn't work as intended
     vals["age"] = int(input("Current age: ") or vals["age"])
     vals["ret age"] = int(input("Retirement age: ") or vals["ret age"])
-    vals["life"] = int(input("Life expectancy: ") or vals["life"])
-    vals["bal"] = int(input("Current traditional account balance: ") or \
-                      vals["bal"])
+    if vals["ret age"] < 59:
+      print("WARNING: retirement distributions may be subject to a penalty." + \
+            " Results may be less accurate.")
+    vals["life"] = int(input("Life expectancy (90 is recommended): ") or \
+                       vals["life"])
+    vals["bal"] = int(input("Current pre-tax balance (thousands of dollars): ") \
+                      or vals["bal"]*.001)*1000
     vals["normalize"] = input("Normalize curves? (y/n): ") or \
                         vals["normalize"]
     vals["work years"] = vals["ret age"] - vals["age"]
@@ -175,7 +179,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   salaries = np.linspace(vals["start sal"], vals["end sal"], vals["work years"])
                 # Better to do this in get_vals()?
   clim = fun.contribution_lim
-  cont = [min(vals["cont"] * x, clim) for x in salaries]
+  cont = [min(vals["cont"] * x, clim) for x in salaries] # Need to fix clim issue
   excess = [max(x * (1 + tx.tax_rate(y)) - clim, 0) for x,y in \
             zip(cont, salaries)]  # Really only have to compute this for trad yrs
   ret_tot = []
@@ -217,6 +221,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
                                 vals["apy"], roth=True)
       acct[0] *= vals["apy"]**(vals["work years"]-i)
       #acct[1] *= 1 - fun.tax_rate(acct[1] / vals["ret years"])
+    trad += vals['bal'] * vals['apy'] ** vals['work years']
     ret_growth_factor = vals["ret apy"] ** vals["ret years"] / \
                         fun.summation(fun.exponentiate, 0, \
                         vals["ret years"]-1, vals["ret apy"])
