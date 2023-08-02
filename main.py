@@ -1,7 +1,7 @@
+import tax_calculator as tx
 import functions as fun
 import numpy as np
 import matplotlib.pyplot as plt
-import tax_calculator as tx
 import json
 import sys
 
@@ -40,13 +40,17 @@ def trial_2():
 
 def get_vals(dic=False):
   vals = {"work years" : 40,    # Default values
-          "ret years" : 20,
+          "ret years" : 30,
           "start sal" : 70*1000,
           "end sal" : 148*1000,
           "apy" : 1.05,
           "normalize" : False,
           "cont" : .1,
-          "ret apy" : 1.03
+          "ret apy" : 1.03,
+          "age" : 25,
+          "ret age" : 65,
+          "life" : 95,
+          "bal" : 0
           }
   if sys.argv[-1] == 'd':
     #return [vals[x] for x in vals] # Not here because still want to save hist
@@ -69,8 +73,8 @@ def get_vals(dic=False):
     print("Yearly salary will be computed as increasing linearly from \n" \
           "starting salary to ending salary over the course of number \n" \
           "of years working.")
-    vals["work years"] = int(input("Years working: ") or vals["work years"])
-    vals["ret years"] = int(input("Years in retirement: ") or vals["ret years"])
+    #vals["work years"] = int(input("Years working: ") or vals["work years"])
+    #vals["ret years"] = int(input("Years in retirement: ") or vals["ret years"])
     vals["start sal"] = int(input("Starting salary (thousands of dollars): ") or \
                         vals["start sal"]*.001)*1000
     vals["end sal"] = int(input("Ending salary (thousands of dollars): ") or \
@@ -83,8 +87,15 @@ def get_vals(dic=False):
                   (vals["ret apy"]-1)*100) * .01 + 1
     #normalize = bool(input("Normalize curves? 1=Yes, 0=No: ") or \
     #            vals["normalize"])   # Doesn't work as intended
+    vals["age"] = int(input("Current age: ") or vals["age"])
+    vals["ret age"] = int(input("Retirement age: ") or vals["ret age"])
+    vals["life"] = int(input("Life expectancy: ") or vals["life"])
+    vals["bal"] = int(input("Current traditional account balance: ") or \
+                      vals["bal"])
     vals["normalize"] = input("Normalize curves? (y/n): ") or \
                         vals["normalize"]
+    vals["work years"] = vals["ret age"] - vals["age"]
+    vals["ret years"] = vals["life"] - vals["ret age"]
     if vals["normalize"] == 'y':
       vals["normalize"] = True
     elif vals["normalize"] == 'n':
@@ -173,10 +184,12 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   withdraw = {"trad" : [], "priv" : []}
   for i in range(0, vals["work years"]+1):
     acct[1] = fun.account_bal(salaries[:i], cont[:i], i, \
-                              vals["apy"], rothorder==1)#first=="roth")
+                              vals["apy"], rothorder==1, age=vals["age"])
+                              #first=="roth")
                               # roth==1 true for roth, false for trad first
     acct[2] = fun.account_bal(salaries[i:], cont[i:], vals["work years"]-i, \
-                              vals["apy"], rothorder==2)#first=="trad")
+                              vals["apy"], rothorder==2, age=vals["age"])
+                              #first=="trad")
                               # roth==2 false for trad, true for roth second
     acct[1] *= vals["apy"]**(vals["work years"]-i)
                               # Continued growth from first account

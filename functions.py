@@ -42,16 +42,16 @@ def tax_rate(income):
   #  if income < x:
   #    return rates[x]          # Returns None of income>highest bracket
 
-def contribution(income, keep, roth=True):
+def contribution(income, keep, roth=True, clim=contribution_lim):
   #roth_cont = income * (1 - tax_rate(income)) - keep
   roth_cont = keep    # Misnamed to avoid edits, keep=cont
   if roth:
     #return income * (1 - tax_rate(income)) - keep
-    return min(roth_cont, contribution_lim)
+    return min(roth_cont, clim)
   else:
     #return (income * (1 - tax_rate(income)) - keep) / (1 - tax_rate(income))
     #return roth_cont / (1 - tax_rate(income - roth_cont))
-    return min(roth_cont / (1 - tax_rate(income)), contribution_lim)
+    return min(roth_cont / (1 - tax_rate(income)), clim)
 
 #def account_bal(P, apy, years):
   #return P * apy**years
@@ -61,11 +61,16 @@ def discrepancy(income, keep):
   trad_keep = income - trad_cont - tx.tax_calc(income-trad_cont)
   return roth_keep - trad_keep
 
-def account_bal(salary_arr, keep_arr, years, apy=1.05, roth=True):
+def account_bal(salary_arr, keep_arr, years, apy=1.05, roth=True, age=18):
   # Is years necessary? Doesn't years have to be len(arr)?
+  clim = contribution_lim
   tot = 0
   for i in range(years):
-    tot += contribution(salary_arr[i], keep_arr[i], roth) * apy**(years-i)
+    if i + age == 50:
+      clim += catchup_bonus
+    tot += contribution(salary_arr[i], keep_arr[i], roth, clim=clim) * \
+           apy**(years-i)
+    # Separate if clause for roth to avoid calling function needlessly?
   return tot
 
 def summation(func, start, stop, *args):
