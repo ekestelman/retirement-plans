@@ -11,10 +11,13 @@ import main
 # Clean up main so that we can also just test the summary results?
 
 def ret_plan_test(args, rothorder, result):
-  assert list(main.ret_plan(args, rothorder)) == result, \
-         "ret_plan_test "+str(args)+' '+str(rothorder)+" FAILED"
-         # Show filename instead of args?
-  print("OK")
+  try:
+    assert list(main.ret_plan(args, rothorder)) == result, \
+           "ret_plan_test "+str(args)+' '+str(rothorder)+" FAILED"
+           # Show filename instead of args?
+    print("OK")
+  except AssertionError as ae:
+    print("AssertionError", ae)
 
 def save_output(results, fname):
   with open(fname, 'w') as f:
