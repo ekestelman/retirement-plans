@@ -75,6 +75,19 @@ def account_bal(salary_arr, keep_arr, years, apy=1.05, roth=True, age=18, clim=[
     # Separate if clause for roth to avoid calling function needlessly?
   return tot
 
+def soc_sec(salaries):
+  salaries = [min(x, 160200) for x in salaries] # Max soc sec contribution
+  salaries.sort(reverse=True)                   # Sort high to low
+  years = min(35, len(salaries))                # We want the 35 highest
+  salaries = salaries[:35]
+  aime = sum(salaries) / 35 / 12 # Average Indexed Monthly Earnings
+  benefit = .9 * min(aime, 1115)
+  if aime > 1115:
+    benefit += .32 * min(aime-1115, 6721-1115)
+    if aime > 6721:
+      benefit += .15 * (aime-6721)
+  return benefit
+
 def summation(func, start, stop, *args):
   tot = 0
   for i in range(start, stop + 1):
