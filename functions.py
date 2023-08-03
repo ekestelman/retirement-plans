@@ -61,14 +61,16 @@ def discrepancy(income, keep):
   trad_keep = income - trad_cont - tx.tax_calc(income-trad_cont)
   return roth_keep - trad_keep
 
-def account_bal(salary_arr, keep_arr, years, apy=1.05, roth=True, age=18):
+def account_bal(salary_arr, keep_arr, years, apy=1.05, roth=True, age=18, clim=[]):
   # Is years necessary? Doesn't years have to be len(arr)?
-  clim = contribution_lim
+  #clim = contribution_lim
+  if clim==[]:
+    clim = [30000 for i in range(years)]  # Beyond hacky
   tot = 0
   for i in range(years):
-    if i + age == 50:
-      clim += catchup_bonus
-    tot += contribution(salary_arr[i], keep_arr[i], roth, clim=clim) * \
+    #if i + age == 50:   # This is not correct
+    #  clim += catchup_bonus
+    tot += contribution(salary_arr[i], keep_arr[i], roth, clim=clim[i]) * \
            apy**(years-i)
     # Separate if clause for roth to avoid calling function needlessly?
   return tot

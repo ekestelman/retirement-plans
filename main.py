@@ -179,20 +179,25 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   salaries = np.linspace(vals["start sal"], vals["end sal"], vals["work years"])
                 # Better to do this in get_vals()?
   clim = fun.contribution_lim
-  cont = [min(vals["cont"] * x, clim) for x in salaries] # Need to fix clim issue
-  excess = [max(x * (1 + tx.tax_rate(y)) - clim, 0) for x,y in \
-            zip(cont, salaries)]  # Really only have to compute this for trad yrs
+  clim = [fun.contribution_lim for i in range(vals['age'], 50)]
+  clim += [fun.contribution_lim + fun.catchup_bonus for i in \
+           range(50, vals['ret age'])]
+  cont = [min(vals["cont"] * x, y) for x,y in zip(salaries, clim)] # Need to fix clim issue
+  excess = [max(x * (1 + tx.tax_rate(y)) - z, 0) for x,y,z in \
+            zip(cont, salaries, clim)]  # Really only have to compute this for trad yrs
   ret_tot = []
   acct = [None, None, None]
   all_accts = {"roth" : [], "trad" : [], "priv" : []}
   withdraw = {"trad" : [], "priv" : []}
   for i in range(0, vals["work years"]+1):
     acct[1] = fun.account_bal(salaries[:i], cont[:i], i, \
-                              vals["apy"], rothorder==1, age=vals["age"])
+                              vals["apy"], rothorder==1, age=vals["age"], \
+                              clim=clim[:i])
                               #first=="roth")
                               # roth==1 true for roth, false for trad first
     acct[2] = fun.account_bal(salaries[i:], cont[i:], vals["work years"]-i, \
-                              vals["apy"], rothorder==2, age=vals["age"])
+                              vals["apy"], rothorder==2, age=vals["age"], \
+                              clim=clim[i:])
                               #first=="trad")
                               # roth==2 false for trad, true for roth second
     acct[1] *= vals["apy"]**(vals["work years"]-i)
@@ -213,6 +218,8 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       # acct[0] is private brokerage acct
       acct[0] = fun.account_bal(salaries[i:], excess[i:], vals["work years"]-i, \
                                 vals["apy"], roth=True)
+      acct[0] -= (acct[0] - sum(excess[i:])) * .15
+      # Assumes no growth on priv in retirement
       #acct[2] *= 1 - fun.tax_rate(acct[2] / vals["ret years"])
     else:
       trad = acct[1]
@@ -220,6 +227,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       acct[0] = fun.account_bal(salaries[:i], excess[:i], i, \
                                 vals["apy"], roth=True)
       acct[0] *= vals["apy"]**(vals["work years"]-i)
+      acct[0] -= (acct[0] - sum(excess[:i])) * .15
       #acct[1] *= 1 - fun.tax_rate(acct[1] / vals["ret years"])
     trad += vals['bal'] * vals['apy'] ** vals['work years']
     ret_growth_factor = vals["ret apy"] ** vals["ret years"] / \
@@ -245,8 +253,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       trad *= 1 - fun.tax_rate(trad)
       #acct[0] *= .9   # VERY rough approx for now
       # Challenge to calculate because profit keeps going up over time
-    # Assume no growth on priv in retirement
-    acct[0] -= (acct[0] - sum(excess)) * .15 
+    # Assume no growth on priv in retirement?
     acct[0] /= vals["ret years"]
     #if ret_growth_factor != 1:      # This didn't make a difference?
     #  acct[0] /= vals["ret years"]
