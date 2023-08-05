@@ -38,7 +38,11 @@ def trial_2():
   
   print(retirement)
 
-def get_vals(dic=False):
+def get_vals(dic=False, loadfile=None):
+  if loadfile:
+    with open(loadfile) as f:
+      vals = json.load(f)
+      return vals
   vals = {"work years" : 40,    # Default values
           "ret years" : 30,
           "start sal" : 70*1000,
@@ -50,7 +54,9 @@ def get_vals(dic=False):
           "age" : 25,
           "ret age" : 65,
           "life" : 95,
-          "bal" : 0
+          "bal" : 0,
+          "pension" : 0,
+          "match" : 0
           }
   if sys.argv[-1] == 'd':
     #return [vals[x] for x in vals] # Not here because still want to save hist
@@ -176,6 +182,11 @@ def trial_4(work_years, ret_years, start_sal, end_sal, apy, normalize=False, \
   return yearly_ret
 
 def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
+  if not vals.get("normalize"):   # Allow widget.py to not show normalize
+    vals["normalize"] = False     # These hacks aren't necessary with new method
+  rothorder = vals.get("rothorder", rothorder) # Allow widget.py to show rothorder
+  vals['work years'] = vals['ret age'] - vals['age']  # Assign calculated vars
+  vals["ret years"] = vals["life"] - vals["ret age"]
   salaries = np.linspace(vals["start sal"], vals["end sal"], vals["work years"])
                 # Better to do this in get_vals()?
   clim = fun.contribution_lim
