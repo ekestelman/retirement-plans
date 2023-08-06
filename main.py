@@ -196,6 +196,9 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   cont = [min(vals["cont"] * x, y) for x,y in zip(salaries, clim)] # Need to fix clim issue
   excess = [max(x * (1 + tx.tax_rate(y)) - z, 0) for x,y,z in \
             zip(cont, salaries, clim)]  # Really only have to compute this for trad yrs
+  match = [min(vals.get("match", 0) * s, c) for s,c in zip(salaries, cont)]
+  # TODO: potential for greater match if you contribute (more) to trad rather
+  # than roth.
   ret_tot = []
   acct = [None, None, None]
   all_accts = {"roth" : [], "trad" : [], "priv" : []}
@@ -240,6 +243,8 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       acct[0] *= vals["apy"]**(vals["work years"]-i)
       acct[0] -= (acct[0] - sum(excess[:i])) * .15
       #acct[1] *= 1 - fun.tax_rate(acct[1] / vals["ret years"])
+    trad += fun.account_bal(salaries[:], match[:], vals['work years'], \
+                            vals['apy'], roth=False, age=vals['age'])
     trad += vals['bal'] * vals['apy'] ** vals['work years']
     ret_growth_factor = vals["ret apy"] ** vals["ret years"] / \
                         fun.summation(fun.exponentiate, 0, \
