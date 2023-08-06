@@ -261,6 +261,11 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       #acct[0] -= (acct[0] - sum(excess)) * .15
     else:
       withdraw["trad"].append(trad)   # For withdrawal instructions
+      trad += vals.get("pension", 0)  # Assume pension is fully taxable (not
+                                      # accurate for soc sec). Should not be
+                                      # subject to FICA either.
+                                      # Not compatible with old method.
+                                      # Use .get for other optional args?
       trad *= 1 - fun.tax_rate(trad)
       #acct[0] *= .9   # VERY rough approx for now
       # Challenge to calculate because profit keeps going up over time
