@@ -67,7 +67,7 @@ def get_vals(dic=False, loadfile=None):
       vals = json.load(f)
   else:   # else not necessary after previous return, YES necessary if 'd'
     try:
-      with open("history.txt") as f:
+      with open("history.txt") as f:  # history is overwriting defaults here
         vals = json.load(f)
     except FileNotFoundError:
       pass
@@ -102,6 +102,10 @@ def get_vals(dic=False, loadfile=None):
                        vals["life"])
     vals["bal"] = int(input("Current pre-tax balance (thousands of dollars): ") \
                       or vals["bal"]*.001)*1000
+    vals["pension"] = int(input("Pension (thousands of dollars): ") or \
+                      vals["pension"]*.001)*1000
+    vals["match"] = float(input("Employer match (%): ") or \
+                    vals["match"]*100) * .01
     vals["normalize"] = input("Normalize curves? (y/n): ") or \
                         vals["normalize"]
     vals["work years"] = vals["ret age"] - vals["age"]
@@ -184,7 +188,7 @@ def trial_4(work_years, ret_years, start_sal, end_sal, apy, normalize=False, \
 def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   if not vals.get("normalize"):   # Allow widget.py to not show normalize
     vals["normalize"] = False     # These hacks aren't necessary with new method
-  rothorder = vals.get("rothorder", rothorder) # Allow widget.py to show rothorder
+  rothorder = vals.get("rothorder", rothorder) # Allow iplot.py to show rothorder
   vals['work years'] = vals['ret age'] - vals['age']  # Assign calculated vars
   vals["ret years"] = vals["life"] - vals["ret age"]
   salaries = np.linspace(vals["start sal"], vals["end sal"], vals["work years"])
@@ -196,6 +200,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   cont = [min(vals["cont"] * x, y) for x,y in zip(salaries, clim)] # Need to fix clim issue
   excess = [max(x * (1 + tx.tax_rate(y)) - z, 0) for x,y,z in \
             zip(cont, salaries, clim)]  # Really only have to compute this for trad yrs
+  vals["match"] = vals.get("match", 0)
   match = [min(vals.get("match", 0) * s, c) for s,c in zip(salaries, cont)]
   # TODO: potential for greater match if you contribute (more) to trad rather
   # than roth.
@@ -235,6 +240,9 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       acct[0] -= (acct[0] - sum(excess[i:])) * .15
       # Assumes no growth on priv in retirement
       #acct[2] *= 1 - fun.tax_rate(acct[2] / vals["ret years"])
+      match[i:] = [min(vals["match"] * s, m / (1-tx.tax_rate(s))) for m,s in \
+                   zip(match[i:], salaries[i:])]
+      # use a tstart and tstop variable to cut out some lines?
     else:
       trad = acct[1]
       roth = acct[2]
@@ -243,8 +251,12 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       acct[0] *= vals["apy"]**(vals["work years"]-i)
       acct[0] -= (acct[0] - sum(excess[:i])) * .15
       #acct[1] *= 1 - fun.tax_rate(acct[1] / vals["ret years"])
+      match[:i] = [min(vals["match"] * s, m / (1-tx.tax_rate(s))) for m,s in \
+                   zip(match[:i], salaries[:i])]
+    #match = [min(vals.get("match", 0) * s, c) for s,c in zip(salaries, cont)]
     trad += fun.account_bal(salaries[:], match[:], vals['work years'], \
                             vals['apy'], roth=False, age=vals['age'])
+    # TODO pension should be separate from trad in pie graph
     trad += vals['bal'] * vals['apy'] ** vals['work years']
     ret_growth_factor = vals["ret apy"] ** vals["ret years"] / \
                         fun.summation(fun.exponentiate, 0, \
