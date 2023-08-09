@@ -14,39 +14,57 @@ import sys
 # Clean up main so that we can also just test the summary results?
 # Way of adding test case from file?
 
-def ret_plan_test(args, rothorder, result):
+def ret_plan_test(args, rothorder, result, trial):
   try:
     assert list(main.ret_plan(args, rothorder)) == result, \
-           "ret_plan_test "+str(args)+' '+str(rothorder)+" FAILED"
+           "ret_plan_test case "+trial+" FAILED"
+           #"ret_plan_test "+str(args)+' '+str(rothorder)+" FAILED"
            # Show filename instead of args?
-    print("OK")
+    #print("OK")    # Comment out to minimize print statements
+    return 1   # For adding to success count
+    # Consider just giving a final count of passed/failed cases?
+    # Maybe a better way: add to a results list, then summarize results
   except AssertionError as ae:
-    print("AssertionError", ae)
+    print("AssertionError:", ae)
+    return 0   # For adding to success count
 
 def save_output(results, fname):   # Pointless funcification?
   with open(fname, 'w') as f:
     json.dump(results, f, indent=2)
 
 def overwrite():
-  try:
-    if sys.argv[1] == "new":
-      print("Are you sure you want to overwrite previous test cases? (y/n)")
-      answer = input()
-      if answer == "y":
-        return True
-      else:
-        return False
-      #  raise KeyboardInterrupt  # just an idea
+  if sys.argv[-1] == "new":
+    print("Are you sure you want to overwrite previous test cases? (y/n)")
+    answer = input()
+    if answer == "y":
+      return True
     else:
-      return False
+      print("Aborting overwrite. Testing existing cases.")
+  return False
+    #  raise KeyboardInterrupt  # just an idea
+
+def add_case():
+  try:
+    if sys.argv[1] == "add":
+      with open(sys.argv[2]) as f:
+        new_case = json.load(f)
+      return new_case
   except IndexError:
-    return False
+    pass         # Return None if sys.argv != "add" or DNE
 
 if __name__ == "__main__":
-  new_save = False    # Use cmd args to change?
-  new_save = overwrite()
-  with open("test_cases.txt") as f:
+  new_save = overwrite()     # False by default
+  add_case = add_case()
+  with open("test_cases.json") as f:
     cases = json.load(f)
+  if add_case:
+    if add_case not in cases["ins"].values():
+      # FIXME will overwrite other test case if any numbers are missing!
+      cases["ins"][str(len(cases["ins"]))] = add_case
+      save_output(cases, "test_cases.json")
+      print("Added new test case")
+    else:
+      print("Duplicate test case")
   ins = cases["ins"]      # Inputs
   if new_save:
     outs = {}
@@ -54,24 +72,28 @@ if __name__ == "__main__":
       try:
         for i in range(1,3):
           results = main.ret_plan(ins[key], i)
-          outs[key+str(i)] = results
+          outs[key+'.'+str(i)] = results
         print("...Saving new test cases for "+key)
       except KeyError as ke:
         #print("KeyError:", ke, "on file", fname)
         print("KeyError:", ke, "on case", key)
     cases["outs"] = outs
-    save_output(cases, "test_cases.txt")
+    save_output(cases, "test_cases.json")
   else:
     outs = cases["outs"]  # Outputs
+    score = 0
     for key in ins:
       results = [None, None]
       try:
         args = ins[key]
         for i in range(1,3):
-          results[i-1] = outs[key+str(i)]
-          ret_plan_test(args, i, results[i-1])
+          results[i-1] = outs[key+'.'+str(i)]
+          score += ret_plan_test(args, i, results[i-1], key+'.'+str(i))
+          # Not necessary to ever return 0 because exception will be raised
       except KeyError as ke:
         print("KeyError", ke, "on case", key)
+    print("Passed", score, '/', len(outs), "test cases")
+    # len(outs) won't include unsaved cases from ins?
 
 
 
