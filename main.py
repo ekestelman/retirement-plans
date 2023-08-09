@@ -27,17 +27,6 @@ def check_discrepancy():
           #fun.contribution(i, .85*(1-fun.tax_rate(i)) * (1-1))
           )
 
-def trial_2():
-  contribution = 6e3
-  salaries = [(70e3, 40)]
-  retirement = 0
-
-  for x in salaries:
-    for i in range(x[1]):
-      retirement = functions.invest(retirement) + contribution
-  
-  print(retirement)
-
 def get_vals(dic=False, loadfile=None):
   if loadfile:
     with open(loadfile) as f:
@@ -91,6 +80,8 @@ def get_vals(dic=False, loadfile=None):
                   (vals["apy"]-1)*100) * .01 + 1
     vals["ret apy"] = float(input("APY during retirement (%): ") or \
                   (vals["ret apy"]-1)*100) * .01 + 1
+    # "or" goes inside float() because if input=0 then (float('0') or x)=x but
+    # float('0' or x)=0 as desired.
     #normalize = bool(input("Normalize curves? 1=Yes, 0=No: ") or \
     #            vals["normalize"])   # Doesn't work as intended
     vals["age"] = int(input("Current age: ") or vals["age"])
@@ -120,70 +111,6 @@ def get_vals(dic=False, loadfile=None):
   if dic:
     return vals
   return [vals[x] for x in vals]
-
-def trial_3(work_years, ret_years, start_sal, end_sal, apy, normalize=False, \
-            cont=.1):
-  #print("Years", "Roth/Yr", "Trad/Yr", "Tot/Yr", "Tax")
-  salaries = np.linspace(start_sal, end_sal, work_years)
-  #keeps = [(0.85-fun.tax_rate(x))*x for x in salaries] # Check math
-  clim = fun.contribution_lim
-  keeps = [min(cont * x, clim) for x in salaries]
-  excess = [max(x * (1 + tx.tax_rate(y)) - clim, 0) for x,y in \
-            zip(keeps, salaries)]  # Can this be more efficient?
-                                   # Necessary if roth<clim<trad?
-  ret_tot = []
-  
-  for i in range(0, work_years+1):
-    roth = fun.account_bal(salaries[:i], keeps[:i], i, apy=apy)
-    roth *= apy**(work_years-i)    # -1?
-    priv = fun.account_bal(salaries[i:], excess[i:], work_years-i, apy=apy, \
-           roth=True)
-    priv -= (priv - sum(excess)) * .15    # Assume 15% capital gains tax
-    trad = fun.account_bal(salaries[i:], keeps[i:], work_years-i, apy=apy, \
-           roth=False)
-    #temp_trad = trad
-    #trad -= trad * fun.tax_rate(trad / ret_years) #* ret_years math mistake
-    trad *= 1 - fun.tax_rate(trad / ret_years) #* ret_years math mistake
-    ret_tot.append(roth+trad+priv)
-
-  print_results(ret_tot, ret_years, normalize)  # Check ret_tot[0] and ret_tot[-1]
-
-  if normalize:
-    return [x / max(ret_tot) for x in ret_tot]
-  yearly_ret = [x / ret_years for x in ret_tot]
-  return yearly_ret
-
-def trial_4(work_years, ret_years, start_sal, end_sal, apy, normalize=False, \
-            cont=.1):  # Can set default args here instead of get_vals()
-  # Check if thousands=True in fun
-  salaries = np.linspace(start_sal, end_sal, work_years)
-  #keeps = [(0.85-fun.tax_rate(x))*x for x in salaries]
-  #keeps = [cont * x for x in salaries]
-  clim = fun.contribution_lim
-  keeps = [min(cont * x, clim) for x in salaries]
-  excess = [max(x * (1 + tx.tax_rate(y)) - clim, 0) for x,y in \
-            zip(keeps, salaries)]
-  ret_tot = []
-  
-  for i in range(0, work_years+1):
-    roth = fun.account_bal(salaries[i:], keeps[i:], work_years-i, apy=apy)
-    #roth += roth * apy**(work_years-i)
-    priv = fun.account_bal(salaries[:i], excess[:i], i, apy=apy, roth=True)
-    trad = fun.account_bal(salaries[:i], keeps[:i], i, apy=apy, roth=False)
-    priv *= apy**(work_years-i)  # -1 ?
-    priv -= (priv - sum(excess)) * .15    # Assume 15% capital gains tax
-    trad *= apy**(work_years-i)  # -1 ?
-    #temp_trad = trad
-    #trad -= trad * fun.tax_rate(trad / ret_years) #* ret_years math mistake
-    trad *= 1 - fun.tax_rate(trad / ret_years) #* ret_years math mistake
-    ret_tot.append(roth+trad+priv)
-
-  print_results(ret_tot, ret_years, normalize)
-
-  if normalize:
-    return [x / max(ret_tot) for x in ret_tot]
-  yearly_ret = [x / ret_years for x in ret_tot]
-  return yearly_ret
 
 def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   if not vals.get("normalize"):   # Allow widget.py to not show normalize
@@ -221,16 +148,6 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
                               # roth==2 false for trad, true for roth second
     acct[1] *= vals["apy"]**(vals["work years"]-i)
                               # Continued growth from first account
-    #distr1 = acct[1] * vals["ret apy"] ** vals["ret years"] / \
-    #         fun.summation(fun.exponentiate, 0, vals["ret years"]-1, \
-    #                       vals["ret apy"])
-    #distr2 = acct[2] * vals["ret apy"] ** vals["ret years"] / \
-    #         fun.summation(fun.exponentiate, 0, vals["ret years"]-1, \
-    #                       vals["ret apy"])
-    #distr0 = acct[0] * vals["ret apy"] ** vals["ret years"] / \
-    #         fun.summation(fun.exponentiate, 0, vals["ret years"]-1, \
-    #                       vals["ret apy"])
-    # Better to rename accts with roth/trad naming?
     if rothorder==1:
       roth = acct[1]      # Consider better var names
       trad = acct[2]
@@ -254,6 +171,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       match[:i] = [min(vals["match"] * s, m / (1-tx.tax_rate(s))) for m,s in \
                    zip(match[:i], salaries[:i])]
     #match = [min(vals.get("match", 0) * s, c) for s,c in zip(salaries, cont)]
+    # Add employer match to trad
     trad += fun.account_bal(salaries[:], match[:], vals['work years'], \
                             vals['apy'], roth=False, age=vals['age'])
     # TODO pension should be separate from trad in pie graph
@@ -262,6 +180,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
                         fun.summation(fun.exponentiate, 0, \
                         vals["ret years"]-1, vals["ret apy"])
                         # Growth factor already determines yearly distribution
+                        # TODO clarify what growth_factor is/does
     #ret_growth_factor = 1
     #if i == 11:
     #  print(roth, trad, acct[0])
@@ -284,6 +203,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
                                       # Not compatible with old method.
                                       # Use .get for other optional args?
       trad *= 1 - fun.tax_rate(trad)
+      # TODO Find tax rate of trad+pension, return each separately.
       #acct[0] *= .9   # VERY rough approx for now
       # Challenge to calculate because profit keeps going up over time
     # Assume no growth on priv in retirement?
@@ -398,6 +318,7 @@ if __name__=="__main__":
     plans.append(rfirst)
     plans.append(tfirst)
     best_yrs = []
+    # TODO use a result function and print the output
     for x in plans:
       best = max(x)
       best_yr = x.index(best)
