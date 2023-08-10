@@ -10,13 +10,13 @@ import json
 import main
 import sys
 
-# Test arrays output by ret_plan?
 # Clean up main so that we can also just test the summary results?
-# Way of adding test case from file?
+# Check which part of each test case failed? (roth, trad, or priv dict)
 
 def ret_plan_test(args, rothorder, result, trial):
   try:
-    assert list(main.ret_plan(args, rothorder)) == result, \
+    new_result = list(main.ret_plan(args, rothorder))
+    assert new_result == result, \
            "ret_plan_test case "+trial+" FAILED"
            #"ret_plan_test "+str(args)+' '+str(rothorder)+" FAILED"
            # Show filename instead of args?
@@ -26,6 +26,37 @@ def ret_plan_test(args, rothorder, result, trial):
     # Maybe a better way: add to a results list, then summarize results
   except AssertionError as ae:
     print("AssertionError:", ae)
+    if False:  # Toggle for breakdown of failed cases
+      for old,new,category in zip(result, new_result, ["tot", "sep", "draw"]):
+        if old != new:
+          print("Failed", category)
+          if type(old)==type(new)==dict:
+            for key in old:
+              if old[key] == new[key]:
+                print("P", key)
+              else:
+                print("F", key)
+          else:
+            allg = True
+            for x,y in zip(old,new):
+              if round(x,9)==round(y,9):
+                continue
+                print("Something worked", x, old.index(x))
+              else:
+                allg=False
+                print("F", x, y, old.index(x))
+            if allg: print("...but only by roundoff error")
+        else:
+          print("Passed", category)
+      #if type(x) == dict:
+      #  for key in x
+      #    if result[key] != new_result[key]:
+      #  print("Failed", key)  # Just do each as individual case?
+      #else:
+      #  print("Passed", key)
+    #for key in new_results:
+    #  if key not in results:
+    #    print(key, "not tested")
     return 0   # For adding to success count
 
 def save_output(results, fname):   # Pointless funcification?
