@@ -133,7 +133,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   # than roth.
   ret_tot = []
   acct = [None, None, None]
-  all_accts = {"roth" : [], "trad" : [], "priv" : []}
+  all_accts = {"roth" : [], "trad" : [], "priv" : [], "pension" : []}
   withdraw = {"trad" : [], "priv" : []}
   for i in range(0, vals["work years"]+1):
     acct[1] = fun.account_bal(salaries[:i], cont[:i], i, \
@@ -197,12 +197,15 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       #acct[0] -= (acct[0] - sum(excess)) * .15
     else:
       withdraw["trad"].append(trad)   # For withdrawal instructions
-      trad += vals.get("pension", 0)  # Assume pension is fully taxable (not
+      #trad += vals.get("pension", 0)  # Assume pension is fully taxable (not
                                       # accurate for soc sec). Should not be
                                       # subject to FICA either.
                                       # Not compatible with old method.
                                       # Use .get for other optional args?
-      trad *= 1 - fun.tax_rate(trad)
+      pension = vals.get("pension", 0)
+      taxable = trad + pension
+      trad *= 1 - fun.tax_rate(taxable)
+      pension *= 1 - fun.tax_rate(taxable) #XXX trad is no longer the same!
       # TODO Find tax rate of trad+pension, return each separately.
       #acct[0] *= .9   # VERY rough approx for now
       # Challenge to calculate because profit keeps going up over time
@@ -214,11 +217,12 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
     #if i == 11:
     #  print(roth, trad, acct[0])
     #ret_tot.append(sum(acct))
-    ret_tot.append(roth + trad + acct[0])
+    ret_tot.append(roth + trad + acct[0] + pension)
     #all_accts.append({"roth" : roth, "trad" : trad, "priv" : acct[0]})
     all_accts["roth"].append(roth)
     all_accts["trad"].append(trad)
     all_accts["priv"].append(acct[0])
+    all_accts["pension"].append(pension)
   #print_results(ret_tot, vals["ret years"], vals["normalize"])
   if vals["normalize"]:
     return [x / max(ret_tot) for x in ret_tot]
@@ -272,7 +276,7 @@ def plot_pies(*strats, ubound=200, lbound=0):   # Choice in * rather than list?
   fig, axs = plt.subplots(1, 3)
   # best_yr bad variable
   for i in range(len(strats)):
-    axs[i].pie(strats[i].values(), labels=["Roth", "Trad", "Private"], \
+    axs[i].pie(strats[i].values(), labels=["Roth", "Trad", "Private", "Pension"], \
                autopct='%1.1f%%')
   #axs[0].pie([rcomp["roth"][best_yrs[0]], \
   #         rcomp["trad"][best_yrs[0]], \
@@ -286,6 +290,7 @@ def plot_pies(*strats, ubound=200, lbound=0):   # Choice in * rather than list?
   axs[1].set_title("Trad first")
   plot_tax_rates(strats[0]["trad"], strats[1]["trad"], ax=axs[2], \
                  ubound=ubound, lbound=lbound)
+                 # FIXME wrong tax rate based on post-tax trad
   plt.show()
   #plot_tax_rates(rcomp["trad"][best_yrs[0]], tcomp["trad"][best_yrs[1]])
   #plot_tax_rates(strats[0]["trad"], strats[1]["trad"])
@@ -345,10 +350,12 @@ if __name__=="__main__":
   plot_plan(plans)
   rbest = {"roth" : rcomp["roth"][best_yrs[0]],
            "trad" : rcomp["trad"][best_yrs[0]],
-           "priv" : rcomp["priv"][best_yrs[0]]}
+           "priv" : rcomp["priv"][best_yrs[0]],
+           "pension" : rcomp["pension"][best_yrs[0]]}
   tbest = {"roth" : tcomp["roth"][best_yrs[1]],
            "trad" : tcomp["trad"][best_yrs[1]],
-           "priv" : tcomp["priv"][best_yrs[1]]}
+           "priv" : tcomp["priv"][best_yrs[1]],
+           "pension" : tcomp["pension"][best_yrs[1]]}
            # Better way than copy paste...
   plot_pies(rbest, tbest, lbound=args["start sal"]/1000, \
             ubound=args["end sal"]/1000)
