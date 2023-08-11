@@ -26,7 +26,8 @@ def ret_plan_test(args, rothorder, result, trial):
     # Maybe a better way: add to a results list, then summarize results
   except AssertionError as ae:
     print("AssertionError:", ae)
-    if False:  # Toggle for breakdown of failed cases
+    #if False:  # Toggle for breakdown of failed cases
+    if sys.argv[-1] == "detail":
       for old,new,category in zip(result, new_result, ["tot", "sep", "draw"]):
         if old != new:
           print("Failed", category)
