@@ -50,8 +50,14 @@ line2, = ax.plot(plans[1][0])
 #comps = [x[1] for x in plans]  # Components
 piedata = main.summary(plans)
 pies = [ax1, ax2]
+plabels = ["Roth", "Traditional", "Private", "Pension"]
 for i in range(2):
-  pies[i].pie(piedata[i].values())
+  use_labels = [label if val>0 else '' for label,val in \
+                zip(plabels,piedata[i].values())]
+  #pies[i].pie(piedata[i].values(), autopct='%1.1f%%', labels=['r','t','pr','pe'])
+  pies[i].pie(piedata[i].values(), autopct=lambda p: '{:.1f}%'.format(p) \
+              if p>0 else '', labels=use_labels)
+#pies[0].legend()  # set labeldistance=1 in pie()?
 #pie1 = ax1.pie(comps[0].values)
 # Could be plt.plot if only one axis object, else ax needs to be specified.
 
@@ -77,9 +83,14 @@ def update(arg):     # Alternative: 0 args in update() and remove next line
   ax.set_ylim(low-diff*.05, high+diff*.05)
   ax.set_xlim(-.05*newvals['work years'], 1.05*newvals['work years'])
   piedata = main.summary([budget, budget2])
+  plabels = ["Roth", "Traditional", "Private", "Pension"]
   for i in range(2):
+    use_labels = [label if val>0 else '' for label,val in \
+                  zip(plabels,piedata[i].values())]
     pies[i].clear()   # Prevents rotating through colors
-    pies[i].pie(piedata[i].values())
+    #pies[i].pie(piedata[i].values(), autopct='%1.1f%%')
+    pies[i].pie(piedata[i].values(), autopct=lambda p: '{:.1f}%'.format(p) \
+                if p>0 else '', labels=use_labels)
     # TODO show percentages in pie chart. Show legend instead of labels?
   plt.draw()
 def new_apy(arg):
