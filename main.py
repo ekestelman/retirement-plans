@@ -116,6 +116,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   if not vals.get("normalize"):   # Allow widget.py to not show normalize
     vals["normalize"] = False     # These hacks aren't necessary with new method
   rothorder = vals.get("rothorder", rothorder) # Allow iplot.py to show rothorder
+  # rothorder arg pointless?
   vals['work years'] = vals['ret age'] - vals['age']  # Assign calculated vars
   vals["ret years"] = vals["life"] - vals["ret age"]
   salaries = np.linspace(vals["start sal"], vals["end sal"], vals["work years"])
@@ -174,7 +175,6 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
     # Add employer match to trad
     trad += fun.account_bal(salaries[:], match[:], vals['work years'], \
                             vals['apy'], roth=False, age=vals['age'])
-    # TODO pension should be separate from trad in pie graph
     trad += vals['bal'] * vals['apy'] ** vals['work years']
     ret_growth_factor = vals["ret apy"] ** vals["ret years"] / \
                         fun.summation(fun.exponentiate, 0, \
@@ -205,8 +205,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       pension = vals.get("pension", 0)
       taxable = trad + pension
       trad *= 1 - fun.tax_rate(taxable)
-      pension *= 1 - fun.tax_rate(taxable) #XXX trad is no longer the same!
-      # TODO Find tax rate of trad+pension, return each separately.
+      pension *= 1 - fun.tax_rate(taxable)
       #acct[0] *= .9   # VERY rough approx for now
       # Challenge to calculate because profit keeps going up over time
     # Assume no growth on priv in retirement?
@@ -272,9 +271,10 @@ def plot_tax_rates(*points, ax, lbound=0, ubound=200):
   #plt.show()
   return ax
 
-def plot_pies(*strats, ubound=200, lbound=0):   # Choice in * rather than list?
+def plot_pies(*strats, ubound=200, lbound=0, rates=True):   # Choice in * rather than list?
   fig, axs = plt.subplots(1, 3)
   # best_yr bad variable
+  # TODO messy plot with 0% categories, get rid of these
   for i in range(len(strats)):
     axs[i].pie(strats[i].values(), labels=["Roth", "Trad", "Private", "Pension"], \
                autopct='%1.1f%%')
@@ -288,14 +288,50 @@ def plot_pies(*strats, ubound=200, lbound=0):   # Choice in * rather than list?
   #         tcomp["priv"][best_yrs[1]]], \
   #         labels=["Roth", "Trad", "Private"], autopct='%1.1f%%')
   axs[1].set_title("Trad first")
-  plot_tax_rates(strats[0]["trad"], strats[1]["trad"], ax=axs[2], \
-                 ubound=ubound, lbound=lbound)
-                 # FIXME wrong tax rate based on post-tax trad
+  if rates:
+    plot_tax_rates(strats[0]["trad"], strats[1]["trad"], ax=axs[2], \
+                   ubound=ubound, lbound=lbound)
+                 # FIXME wrong tax rate based on post-tax trad (and no pension)
   plt.show()
   #plot_tax_rates(rcomp["trad"][best_yrs[0]], tcomp["trad"][best_yrs[1]])
   #plot_tax_rates(strats[0]["trad"], strats[1]["trad"])
               # best_yrs global var?
               # maybe better choice in args, don't need whole rcomp dic + lists
+
+#def get_results(ret_tot, all_accts, withdraw):
+def summary(plans):
+  # Want plan func to call results/summary func
+  # Plans is a list of 2 retirement plans to be compared.
+  tots = [x[0] for x in plans]   # Total yearly retirement funds
+  rfirst, tfirst = tots
+  rcomp, tcomp = [x[1] for x in plans]  # Components of tots (trad/roth/priv/pens)
+  rwithdraw, twithdraw = [x[2] for x in plans]  # Trad withdrawal
+  best_yrs = []
+  for x in tots:
+    best = max(x)
+    best_yr = x.index(best)
+    best_yrs.append(best_yr)
+    worst = min(x)
+    print("Best:" + str(best_yr).rjust(3) + str(int(best)).rjust(9) + "  ", \
+          "Worst:" + str(int(worst)).rjust(9) + "  ", \
+          "Diff:" + str(int(best-worst)).rjust(9))
+  print("Optimal diff:", int(max(tots[0])-max(tots[1])))
+  print("Yearly trad withdrawal (pretax):", \
+        int(rwithdraw["trad"][best_yrs[0]]), "or", \
+        int(twithdraw["trad"][best_yrs[1]]))
+  if not (rfirst[0]==tfirst[-1] and rfirst[-1]==tfirst[0]): # Sanity check
+    print("Something's wrong! Please contact the author :)")
+  #plot_plan(plans)
+  rbest = {"roth" : rcomp["roth"][best_yrs[0]],
+           "trad" : rcomp["trad"][best_yrs[0]],
+           "priv" : rcomp["priv"][best_yrs[0]],
+           "pension" : rcomp["pension"][best_yrs[0]]}
+  tbest = {"roth" : tcomp["roth"][best_yrs[1]],
+           "trad" : tcomp["trad"][best_yrs[1]],
+           "priv" : tcomp["priv"][best_yrs[1]],
+           "pension" : tcomp["pension"][best_yrs[1]]}
+           # Better way than copy paste...
+  return rbest, tbest
 
 def compare_comp():
   tax = np.linspace(0, 50, 1000)
@@ -358,6 +394,9 @@ if __name__=="__main__":
            "pension" : tcomp["pension"][best_yrs[1]]}
            # Better way than copy paste...
   plot_pies(rbest, tbest, lbound=args["start sal"]/1000, \
+            ubound=args["end sal"]/1000)
+  pie_data = summary([[rfirst, rcomp, rwithdraw], [tfirst, tcomp, twithdraw]])
+  plot_pies(*pie_data, lbound=args["start sal"]/1000, \
             ubound=args["end sal"]/1000)
                 # 0 is best roth yr, 1 is best trad yr
   #plt.stackplot(np.arange(0, len(rfirst), 1), rcomp.values())
