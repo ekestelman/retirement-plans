@@ -32,10 +32,27 @@ else:
                                                  # years from today, but not
                                                  # yet operational.
 #year = np.arange(0, vals["work years"]+1, 1)
-line, = ax.plot(main.ret_plan(vals, rothorder)[0])
+# TODO rothorder arg in ret_plan does nothing
+plans = [None, None]
+plans[0] = main.ret_plan(vals, 1)
 vals["rothorder"] = 2
-line2, = ax.plot(main.ret_plan(vals, rothorder)[0])
-#pie1 = ax1.pie  # Summary function would be very handy here
+plans[1] = main.ret_plan(vals, 2)
+vals["rothorder"] = 1    # Necessary for tbox to show 1 initially.
+#for x in plans:
+#  print("Plan\n")
+#  for y in x:
+#    print(y,'\n')
+#line, = ax.plot(main.ret_plan(vals, rothorder)[0])
+line, = ax.plot(plans[0][0])
+#vals["rothorder"] = 2
+#line2, = ax.plot(main.ret_plan(vals, rothorder)[0])
+line2, = ax.plot(plans[1][0])
+#comps = [x[1] for x in plans]  # Components
+piedata = main.summary(plans)
+pies = [ax1, ax2]
+for i in range(2):
+  pies[i].pie(piedata[i].values())
+#pie1 = ax1.pie(comps[0].values)
 # Could be plt.plot if only one axis object, else ax needs to be specified.
 
 del vals['normalize'], vals['work years'], vals['ret years']
@@ -45,20 +62,25 @@ def update(arg):     # Alternative: 0 args in update() and remove next line
                      # ^may be better if I want to only allow certain args
                      # to be cahnged.
   newvals = {v : eval(boxes[v].text) for v in vals}
-  budget = main.ret_plan(newvals, rothorder)[0] # newvals -> vals
+  budget = main.ret_plan(newvals, rothorder) # newvals -> vals
                                                 # if alt method
   newvals["rothorder"] = newvals["rothorder"] % 2 + 1
-  budget2 = main.ret_plan(newvals, rothorder)[0]
+  budget2 = main.ret_plan(newvals, rothorder)
   newvals['work years'] = newvals['ret age'] - newvals['age']
   years = np.arange(0, newvals['work years']+1, 1)
   #line.set_ydata(budget)   # Insufficient of we change age/ret age/work years
-  line.set_data(years, budget)
-  line2.set_data(years, budget2)
-  high = max(np.max(budget), np.max(budget2))
-  low = min(np.min(budget), np.min(budget2))
+  line.set_data(years, budget[0]) # 0:yearly total, 1:components, 2:withdrawal
+  line2.set_data(years, budget2[0])
+  high = max(np.max(budget[0]), np.max(budget2[0]))
+  low = min(np.min(budget[0]), np.min(budget2[0]))
   diff = high-low
   ax.set_ylim(low-diff*.05, high+diff*.05)
   ax.set_xlim(-.05*newvals['work years'], 1.05*newvals['work years'])
+  piedata = main.summary([budget, budget2])
+  for i in range(2):
+    pies[i].clear()   # Prevents rotating through colors
+    pies[i].pie(piedata[i].values())
+    # TODO show percentages in pie chart. Show legend instead of labels?
   plt.draw()
 def new_apy(arg):
   #vals["apy"] = 1 + float(arg) / 100  # Maybe better? But need to edit textbox
