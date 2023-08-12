@@ -321,7 +321,6 @@ def summary(plans):
         int(twithdraw["trad"][best_yrs[1]]))
   if not (rfirst[0]==tfirst[-1] and rfirst[-1]==tfirst[0]): # Sanity check
     print("Something's wrong! Please contact the author :)")
-  #plot_plan(plans)
   rbest = {"roth" : rcomp["roth"][best_yrs[0]],
            "trad" : rcomp["trad"][best_yrs[0]],
            "priv" : rcomp["priv"][best_yrs[0]],
@@ -338,72 +337,16 @@ def compare_comp():
 
 if __name__=="__main__":
       
-  #normalize = False
-  plans = []
-  if 1:
-    args = get_vals(True)
-    #plans = [ret_plan(args, 1)[0], ret_plan(args, 2)[0]]
-    rfirst, rcomp, rwithdraw = ret_plan(args, 1)
-    tfirst, tcomp, twithdraw = ret_plan(args, 2)
-    #rcomp = rfirst[1]  # Roth first components
-    #tcomp = tfirst[1]  # Trad first components
-    #rfirst = rfirst[0]
-    #tfirst = tfirst[0]
-    #rtots = [sum(x.values()) for x in rfirst]
-    #ttots = [sum(x.values()) for x in tfirst]
-    #rtots = [sum(x[i]) for x in rfirst for i in range(len(x))]
-    #ttots = [sum(x[i]) for x in tfirst for i in range(len(x))]
-    #plans = [rfirst[0], tfirst[0]]
-    #plans.append(rfirst)
-    #plans.append(tfirst)
-    plans.append(rfirst)
-    plans.append(tfirst)
-    best_yrs = []
-    # TODO use a result function and print the output
-    for x in plans:
-      best = max(x)
-      best_yr = x.index(best)
-      best_yrs.append(best_yr)
-      worst = min(x)
-      print("Best:" + str(best_yr).rjust(3) + str(int(best)).rjust(9) + "  ", \
-            "Worst:" + str(int(worst)).rjust(9) + "  ", \
-            "Diff:" + str(int(best-worst)).rjust(9))
-    print("Optimal diff:", int(max(plans[0])-max(plans[1])))
-    print("Yearly trad withdrawal (pretax):", \
-          int(rwithdraw["trad"][best_yrs[0]]), "or", \
-          int(twithdraw["trad"][best_yrs[1]]))
-    if not (rfirst[0]==tfirst[-1] and rfirst[-1]==tfirst[0]): # Sanity check
-      print("Something's wrong! Please contact the author :)")
-  if 0:
-    args = get_vals()
-    #plans = [trial_3(*args), trial_4(*args)]#, trial_3(*args[:4], 1.07)]
-    plans.append(trial_3(*args))
-    plans.append(trial_4(*args))
-  if 0:
-    plans = [trial_3(*args), trial_4(*args), trial_3(*args[:4], 1.07, args[5]), \
-             trial_4(*args[:4], 1.07, args[5]), \
-             trial_3(*args[:4], 1.1, args[5]), trial_4(*args[:4], 1.1, args[5])]
-  plot_plan(plans)
-  rbest = {"roth" : rcomp["roth"][best_yrs[0]],
-           "trad" : rcomp["trad"][best_yrs[0]],
-           "priv" : rcomp["priv"][best_yrs[0]],
-           "pension" : rcomp["pension"][best_yrs[0]]}
-  tbest = {"roth" : tcomp["roth"][best_yrs[1]],
-           "trad" : tcomp["trad"][best_yrs[1]],
-           "priv" : tcomp["priv"][best_yrs[1]],
-           "pension" : tcomp["pension"][best_yrs[1]]}
-           # Better way than copy paste...
-  plot_pies(rbest, tbest, lbound=args["start sal"]/1000, \
-            ubound=args["end sal"]/1000)
-  pie_data = summary([[rfirst, rcomp, rwithdraw], [tfirst, tcomp, twithdraw]])
+  args = get_vals(True)
+  plans = [ret_plan(args, 1), ret_plan(args, 2)]
+  pie_data = summary(plans)
+  tots = [x[0] for x in plans]
+  plot_plan(tots)
   plot_pies(*pie_data, lbound=args["start sal"]/1000, \
             ubound=args["end sal"]/1000)
-                # 0 is best roth yr, 1 is best trad yr
   #plt.stackplot(np.arange(0, len(rfirst), 1), rcomp.values())
   #plt.show()
   #plt.stackplot(np.arange(0, len(tfirst), 1), tcomp.values())
   #plt.show()
-  #trial_3(*args)
-  #trial_4(*args)
   #check_discrepancy()
   #plot_tax_rates()
