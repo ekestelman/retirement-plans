@@ -113,6 +113,7 @@ def get_vals(dic=False, loadfile=None):
   return [vals[x] for x in vals]
 
 def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
+  # TODO give rothorder default value?
   if not vals.get("normalize"):   # Allow widget.py to not show normalize
     vals["normalize"] = False     # These hacks aren't necessary with new method
   rothorder = vals.get("rothorder", rothorder) # Allow iplot.py to show rothorder
@@ -125,9 +126,19 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   clim = [fun.contribution_lim for i in range(vals['age'], 50)]
   clim += [fun.contribution_lim + fun.catchup_bonus for i in \
            range(50, vals['ret age'])]
-  cont = [min(vals["cont"] * x, y) for x,y in zip(salaries, clim)] # Need to fix clim issue
+  # TODO clim also being used in fun.contribution?
+  # TODO may be easier to get the right match if cont list is established for
+  # each plan (i.e., a cont list for switching from roth to trad at 0, at 1, 
+  # etc.)
+  cont = [min(vals["cont"] * x, y) for x,y in zip(salaries, clim)]
+  # Allow user to set clim? Maybe all the policies should be in a config file.
+  # Config file can include tax brackets, limits, default args...
   excess = [max(x * (1 + tx.tax_rate(y)) - z, 0) for x,y,z in \
-            zip(cont, salaries, clim)]  # Really only have to compute this for trad yrs
+            zip(cont, salaries, clim)]
+            # Really only have to compute this for trad yrs
+            # Should this be a bit higher? This works if cont=clim. What about
+            # cont<clim<cont+excess? or < cont(1-taxrate)? Maybe this is close
+            # enough as a floor.
   vals["match"] = vals.get("match", 0)
   match = [min(vals.get("match", 0) * s, c) for s,c in zip(salaries, cont)]
   # TODO: potential for greater match if you contribute (more) to trad rather
@@ -136,7 +147,7 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   acct = [None, None, None]
   all_accts = {"roth" : [], "trad" : [], "priv" : [], "pension" : []}
   withdraw = {"trad" : [], "priv" : []}
-  for i in range(0, vals["work years"]+1):
+  def plan_calc(i):
     acct[1] = fun.account_bal(salaries[:i], cont[:i], i, \
                               vals["apy"], rothorder==1, age=vals["age"], \
                               clim=clim[:i])
@@ -158,8 +169,8 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       acct[0] -= (acct[0] - sum(excess[i:])) * .15
       # Assumes no growth on priv in retirement
       #acct[2] *= 1 - fun.tax_rate(acct[2] / vals["ret years"])
-      match[i:] = [min(vals["match"] * s, m / (1-tx.tax_rate(s))) for m,s in \
-                   zip(match[i:], salaries[i:])]
+      #match[i:] = [min(vals["match"] * s, m / (1-tx.tax_rate(s))) for m,s in \
+      #             zip(match[i:], salaries[i:])]
       # use a tstart and tstop variable to cut out some lines?
     else:
       trad = acct[1]
@@ -169,8 +180,16 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       acct[0] *= vals["apy"]**(vals["work years"]-i)
       acct[0] -= (acct[0] - sum(excess[:i])) * .15
       #acct[1] *= 1 - fun.tax_rate(acct[1] / vals["ret years"])
-      match[:i] = [min(vals["match"] * s, m / (1-tx.tax_rate(s))) for m,s in \
-                   zip(match[:i], salaries[:i])]
+      #match[:i] = [min(vals["match"] * s, m / (1-tx.tax_rate(s))) for m,s in \
+      #             zip(match[:i], salaries[:i])]
+      # FIXME does 172 and 183 correct for greater match with trad? But fails
+      # sanity check in edge cases where cont < match. Commenting out resolves
+      # sanity check and non-edge cases are unaffected.
+      # Hypothesis: if match < cont, 172 and 183 do nothing. If cont < match,
+      # 172 and 183 will produce higher value in first min arg, so second min
+      # arg may be returned (or higher first arg). Doesn't explain sanity fail
+      # though? Only explains why non-edge cases are unaffected.
+      # I think sanity check fails due to off by 1 error.
     #match = [min(vals.get("match", 0) * s, c) for s,c in zip(salaries, cont)]
     # Add employer match to trad
     trad += fun.account_bal(salaries[:], match[:], vals['work years'], \
@@ -204,6 +223,10 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
                                       # Use .get for other optional args?
       pension = vals.get("pension", 0)
       taxable = trad + pension
+      # FIXME true pension is probably fully taxable but not soc sec (only up
+      # to 85%). Not subject to FICA, but should have been paid earlier.
+      # Separate out other pension from soc sec? Other solution: only input
+      # taxable pension (other pension + 85% of soc sec).
       trad *= 1 - fun.tax_rate(taxable)
       pension *= 1 - fun.tax_rate(taxable)
       #acct[0] *= .9   # VERY rough approx for now
@@ -223,6 +246,9 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
     all_accts["priv"].append(acct[0])
     all_accts["pension"].append(pension)
   #print_results(ret_tot, vals["ret years"], vals["normalize"])
+  for i in range(0, vals["work years"]+1):
+    plan_calc(i)
+  old_method=False
   if vals["normalize"]:
     return [x / max(ret_tot) for x in ret_tot]
     # ret_tot may be obsolete once we account for growth in retirement, since
