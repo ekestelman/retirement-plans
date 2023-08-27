@@ -361,8 +361,7 @@ def summary(plans):
 def compare_comp():
   tax = np.linspace(0, 50, 1000)
 
-if __name__=="__main__":
-      
+def main():
   args = get_vals(True)
   plans = [ret_plan(args, 1), ret_plan(args, 2)]
   pie_data = summary(plans)
@@ -370,6 +369,9 @@ if __name__=="__main__":
   plot_plan(tots)
   plot_pies(*pie_data, lbound=args["start sal"]/1000, \
             ubound=args["end sal"]/1000)
+
+if __name__=="__main__":
+  main()
   #plt.stackplot(np.arange(0, len(rfirst), 1), rcomp.values())
   #plt.show()
   #plt.stackplot(np.arange(0, len(tfirst), 1), tcomp.values())
