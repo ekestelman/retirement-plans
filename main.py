@@ -287,11 +287,8 @@ def plot_plan(plans):
     i += 1
   #plt.plot([0], [0], ls='--', label="Best 1%")
   ht = HandlerTuple(ndivide=None)
-  print(lines+[tuple(dashes)])
-  print(labels+["Best"])
   plt.legend(handles=lines+[tuple(dashes)], 
              labels=labels+["Best 1%"], handler_map={tuple: ht})
-  plt.tight_layout()
   #plt.show()
 
 def plot_tax_rates(*points, ax, lbound=0, ubound=200):
@@ -340,6 +337,7 @@ def plot_pies(*strats, ubound=200, lbound=0, rates=False):   # Choice in * rathe
     plot_tax_rates(*taxable, ax=axs[2], \
                    ubound=ubound, lbound=lbound)
                  # FIXME wrong tax rate based on post-tax trad (and no pension)
+  plt.tight_layout()
   plt.show()
   #plot_tax_rates(rcomp["trad"][best_yrs[0]], tcomp["trad"][best_yrs[1]])
   #plot_tax_rates(strats[0]["trad"], strats[1]["trad"])
