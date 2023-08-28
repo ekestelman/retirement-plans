@@ -1,5 +1,8 @@
 # Testing module
-# Instructions: replace elements in "files" list with filenames containing \
+# Instructions: `python test.py add [filename]` to add new test case.
+# `python test.py new` to save new results for all test cases (necessary when
+# adding new test case). `python test.py detail` for details on failed cases.
+# Old Instructions: replace elements in "files" list with filenames containing \
 # the desired inputs for the main program. To save test case results, set \
 # new_save = True. To test the program against previously saved answers, set \
 # new_save = False.
@@ -64,6 +67,7 @@ def save_output(results, fname):   # Pointless funcification?
   with open(fname, 'w') as f:
     json.dump(results, f, indent=2)
 
+# TODO option create new save without needing to overwrite old saves?
 def overwrite():
   if sys.argv[-1] == "new":
     print("Are you sure you want to overwrite previous test cases? (y/n)")
