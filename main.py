@@ -298,6 +298,8 @@ def plot_tax_rates(*points, ax, lbound=0, ubound=200):
   return ax
 
 def plot_pies(*strats, ubound=200, lbound=0, rates=True):   # Choice in * rather than list?
+  strats = list(strats)
+  taxable = strats.pop()
   fig, axs = plt.subplots(1, 3)
   # best_yr bad variable
   # TODO messy plot with 0% categories, get rid of these
@@ -315,7 +317,7 @@ def plot_pies(*strats, ubound=200, lbound=0, rates=True):   # Choice in * rather
   #         labels=["Roth", "Trad", "Private"], autopct='%1.1f%%')
   axs[1].set_title("Trad first")
   if rates:
-    plot_tax_rates(strats[0]["trad"], strats[1]["trad"], ax=axs[2], \
+    plot_tax_rates(*taxable, ax=axs[2], \
                    ubound=ubound, lbound=lbound)
                  # FIXME wrong tax rate based on post-tax trad (and no pension)
   plt.show()
@@ -332,6 +334,7 @@ def summary(plans):
   rfirst, tfirst = tots
   rcomp, tcomp = [x[1] for x in plans]  # Components of tots (trad/roth/priv/pens)
   rwithdraw, twithdraw = [x[2] for x in plans]  # Trad withdrawal
+  withdraw = [x[2] for x in plans]  # Trad withdrawal
   best_yrs = []
   for x in tots:
     best = max(x)
@@ -342,6 +345,7 @@ def summary(plans):
           "Worst:" + str(int(worst)).rjust(9) + "  ", \
           "Diff:" + str(int(best-worst)).rjust(9))
   print("Optimal diff:", int(max(tots[0])-max(tots[1])))
+  taxable = [rwithdraw["trad"][best_yrs[0]], twithdraw["trad"][best_yrs[1]]]
   print("Yearly trad withdrawal (pretax):", \
         int(rwithdraw["trad"][best_yrs[0]]), "or", \
         int(twithdraw["trad"][best_yrs[1]]))
@@ -356,7 +360,8 @@ def summary(plans):
            "priv" : tcomp["priv"][best_yrs[1]],
            "pension" : tcomp["pension"][best_yrs[1]]}
            # Better way than copy paste...
-  return rbest, tbest
+  taxable = [t + p for t,p in zip(taxable, (rbest["pension"],tbest["pension"]))]
+  return rbest, tbest, taxable
 
 def compare_comp():
   tax = np.linspace(0, 50, 1000)
