@@ -268,17 +268,31 @@ def print_results(ret_tot, ret_years, normalize):
   print(max(ret_tot)/ret_years, min(ret_tot)/ret_years)
   #print(ret_tot[0], ret_tot[-1])  # Sanity check
 
+from matplotlib.legend_handler import HandlerTuple
 def plot_plan(plans):
   color_num = 0
+  ax = plt.subplot(211)
+  labels = ["Roth first", "Traditional first"]
+  lines = [None for x in plans]
+  dashes = [None for x in plans]
+  i = 0
   for y in plans:
-    plt.plot(np.arange(0, len(y), 1), y, label = "")
+    lines[i], = ax.plot(np.arange(0, len(y), 1), y, label=labels[i])
     color = 'C' + str(color_num)
-    plt.hlines(max(y)*.99, 0, len(y), color, ls='--')
+    dashes[i] = ax.hlines(max(y)*.99, 0, len(y), color, ls='--', label="Best 1%")
     color_num += 1
     plt.xlabel("Year at which we switch type")
     plt.ylabel("Yearly income in retirement")
     plt.title("Contribute to Roth or Trad for x years, then switch")
-  plt.show()
+    i += 1
+  #plt.plot([0], [0], ls='--', label="Best 1%")
+  ht = HandlerTuple(ndivide=None)
+  print(lines+[tuple(dashes)])
+  print(labels+["Best"])
+  plt.legend(handles=lines+[tuple(dashes)], 
+             labels=labels+["Best 1%"], handler_map={tuple: ht})
+  plt.tight_layout()
+  #plt.show()
 
 def plot_tax_rates(*points, ax, lbound=0, ubound=200):
   salaries = np.linspace(min(lbound,min(points)/1000), \
@@ -297,15 +311,21 @@ def plot_tax_rates(*points, ax, lbound=0, ubound=200):
   #plt.show()
   return ax
 
-def plot_pies(*strats, ubound=200, lbound=0, rates=True):   # Choice in * rather than list?
+def plot_pies(*strats, ubound=200, lbound=0, rates=False):   # Choice in * rather than list?
   strats = list(strats)
   taxable = strats.pop()
-  fig, axs = plt.subplots(1, 3)
+  #fig, axs = plt.subplots(1, 3)
+  #fig = plt.figure()  # Maybe not necessary?
+  if rates:
+    axs = [plt.subplot(2, 3, i) for i in range(4,7)]
+  else:
+    axs = [plt.subplot(2, 2, i) for i in range(3,5)]
   # best_yr bad variable
   # TODO messy plot with 0% categories, get rid of these
   for i in range(len(strats)):
-    axs[i].pie(strats[i].values(), labels=["Roth", "Trad", "Private", "Pension"], \
-               autopct='%1.1f%%')
+    axs[i].pie(strats[i].values(), labels=[lab if val>0 else '' for lab,val in \
+               zip(["Roth", "Trad", "Private", "Pension"], strats[i].values())], \
+               autopct=lambda p: '{:.1f}%'.format(p) if p>0 else '')
   #axs[0].pie([rcomp["roth"][best_yrs[0]], \
   #         rcomp["trad"][best_yrs[0]], \
   #         rcomp["priv"][best_yrs[0]]], \
