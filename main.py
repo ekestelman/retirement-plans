@@ -169,8 +169,24 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       acct[0] -= (acct[0] - sum(excess[i:])) * .15
       # Assumes no growth on priv in retirement
       #acct[2] *= 1 - fun.tax_rate(acct[2] / vals["ret years"])
+      old_match = [x for x in match[i:]]
       #match[i:] = [min(vals["match"] * s, m / (1-tx.tax_rate(s))) for m,s in \
-      #             zip(match[i:], salaries[i:])]
+      #             zip(match[i:], salaries[i:])]  # Bad var name?
+      new_match = match[:]
+      new_match[i:] = [min(vals["match"] * s, m / (1-tx.tax_rate(s))) for m,s in \
+                   zip(match[i:], salaries[i:])]
+      #new_match = match[i:]
+      #if i==0:
+      #  print(old_match,'\n',new_match)
+      #eq, neq = 0, 0    # Debugging
+      #for j in range(len(old_match)):
+      #  if old_match[j]==new_match[j]:
+      #    eq += 1
+      #  else:
+      #    neq += 1
+      #print(rothorder, eq, neq)
+      #if old_match != new_match:
+      #  print(old_match,'\n',new_match)
       # use a tstart and tstop variable to cut out some lines?
     else:
       trad = acct[1]
@@ -180,8 +196,23 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       acct[0] *= vals["apy"]**(vals["work years"]-i)
       acct[0] -= (acct[0] - sum(excess[:i])) * .15
       #acct[1] *= 1 - fun.tax_rate(acct[1] / vals["ret years"])
+      old_match = [x for x in match[:i]]
       #match[:i] = [min(vals["match"] * s, m / (1-tx.tax_rate(s))) for m,s in \
       #             zip(match[:i], salaries[:i])]
+      new_match = match[:]
+      new_match[:i] = [min(vals["match"] * s, m / (1-tx.tax_rate(s))) for m,s in \
+                   zip(match[:i], salaries[:i])]
+      #new_match = match[:i]
+      #if i==vals["work years"]:
+      #  print(vals["work years"]==len(match))
+      #  print(old_match,'\n',new_match)
+      #eq, neq = 0, 0    # Debugging
+      #for j in range(len(old_match)):
+      #  if old_match[j]==new_match[j]:
+      #    eq += 1
+      #  else:
+      #    neq += 1
+      #print(rothorder, eq, neq)
       # FIXME does 172 and 183 correct for greater match with trad? But fails
       # sanity check in edge cases where cont < match. Commenting out resolves
       # sanity check and non-edge cases are unaffected.
@@ -192,7 +223,8 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
       # I think sanity check fails due to off by 1 error.
     #match = [min(vals.get("match", 0) * s, c) for s,c in zip(salaries, cont)]
     # Add employer match to trad
-    trad += fun.account_bal(salaries[:], match[:], vals['work years'], \
+    # Use match instead of new_match to not account for increase match
+    trad += fun.account_bal(salaries[:], new_match[:], vals['work years'], \
                             vals['apy'], roth=False, age=vals['age'])
     trad += vals['bal'] * vals['apy'] ** vals['work years']
     ret_growth_factor = vals["ret apy"] ** vals["ret years"] / \
@@ -318,7 +350,6 @@ def plot_pies(*strats, ubound=200, lbound=0, rates=False):   # Choice in * rathe
   else:
     axs = [plt.subplot(2, 2, i) for i in range(3,5)]
   # best_yr bad variable
-  # TODO messy plot with 0% categories, get rid of these
   for i in range(len(strats)):
     axs[i].pie(strats[i].values(), labels=[lab if val>0 else '' for lab,val in \
                zip(["Roth", "Trad", "Private", "Pension"], strats[i].values())], \
@@ -336,7 +367,6 @@ def plot_pies(*strats, ubound=200, lbound=0, rates=False):   # Choice in * rathe
   if rates:
     plot_tax_rates(*taxable, ax=axs[2], \
                    ubound=ubound, lbound=lbound)
-                 # FIXME wrong tax rate based on post-tax trad (and no pension)
   plt.tight_layout()
   plt.show()
   #plot_tax_rates(rcomp["trad"][best_yrs[0]], tcomp["trad"][best_yrs[1]])
