@@ -4,6 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 import sys
+from tabulate import tabulate
+import textwrap
+
+# TODO Need requirements in README
 
 def check_discrepancy():
   print("Salary|RCont|TCont|RKeep|TKeep|DKeep|Tax Saved|DCont")
@@ -384,21 +388,47 @@ def summary(plans):
   rwithdraw, twithdraw = [x[2] for x in plans]  # Trad withdrawal
   withdraw = [x[2] for x in plans]  # Trad withdrawal
   best_yrs = []
+  # TODO Printing should probably be in a separate function.
+  table = [['', "Best year to change:", "Best retirement income:",
+            "Worst retirement income:", "Best - Worst:"]]
+  cols = ["Roth first", "Trad first"]
+  i = 0
   for x in tots:
     best = max(x)
     best_yr = x.index(best)
     best_yrs.append(best_yr)
     worst = min(x)
-    print("Best:" + str(best_yr).rjust(3) + str(int(best)).rjust(9) + "  ", \
-          "Worst:" + str(int(worst)).rjust(9) + "  ", \
-          "Diff:" + str(int(best-worst)).rjust(9))
-  print("Optimal diff:", int(max(tots[0])-max(tots[1])))
+    table.append([cols[i], best_yr, int(best), int(worst), int(best-worst)])
+    i += 1
+    #print("Best:" + str(best_yr).rjust(3) + str(int(best)).rjust(9) + "  ", \
+    #      "Worst:" + str(int(worst)).rjust(9) + "  ", \
+    #      "Diff:" + str(int(best-worst)).rjust(9))
+  # Transpose table
+  table.append(["Difference", '', int(max(tots[0])-max(tots[1])), '', ''])
+  table = [[row[i] for row in table] for i in range(len(table[0]))]
+  print(tabulate(table))
+  #print("Optimal diff:", int(max(tots[0])-max(tots[1])))
   taxable = [rwithdraw["trad"][best_yrs[0]], twithdraw["trad"][best_yrs[1]]]
   print("Yearly trad withdrawal (pretax):", \
         int(rwithdraw["trad"][best_yrs[0]]), "or", \
         int(twithdraw["trad"][best_yrs[1]]))
+  explain = ('ex' in sys.argv)
+  if explain:
+    print('')
+    message = [
+    "Displayed are two possible strategies: either contributing to a Roth account for x years and then switching to traditional for the remainder of your career, or first contributing to a traditional account for x years and then switching to Roth for the remaining years.",
+    f"Using the Roth first strategy, it is best to switch to traditional after {best_yrs[0]} years. Your retirement income (after paying taxes) will be {int(max(tots[0]))}. Each year of retirement you should withdraw {int(rwithdraw['trad'][best_yrs[0]])} from your traditional account.",
+    f"Using the traditional first strategy, it is best to switch to Roth after {best_yrs[1]} years. Your retirement income (after paying taxes) will be {int(max(tots[1]))}. Each year of retirement you should withdraw {int(twithdraw['trad'][best_yrs[1]])} from your traditional account.",
+    ]
+    # TODO say "never switch" if that's the case, or "Best to only use x strat"
+    # TODO human readable and dollar signs?
+    message = [textwrap.fill(m) for m in message]
+    print(*message, sep='\n\n')
+    #print("\n"+textwrap.fill(message))  # Use width kwarg
   if not (rfirst[0]==tfirst[-1] and rfirst[-1]==tfirst[0]): # Sanity check
-    print("Something's wrong! Please contact the author :)")
+    print('*'*72+"\n* Something's wrong! Please save your inputs and "+\
+          "contact the author :) *\n"+'*'*72)
+    # TODO Include output of args for help debugging?
   rbest = {"roth" : rcomp["roth"][best_yrs[0]],
            "trad" : rcomp["trad"][best_yrs[0]],
            "priv" : rcomp["priv"][best_yrs[0]],
