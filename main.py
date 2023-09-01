@@ -36,20 +36,20 @@ def get_vals(dic=False, loadfile=None):
     with open(loadfile) as f:
       vals = json.load(f)
       return vals
-  vals = {"work years" : 40,    # Default values
-          "ret years" : 30,
-          "start sal" : 70*1000,
-          "end sal" : 148*1000,
-          "apy" : 1.05,
-          "normalize" : False,
-          "cont" : .1,
-          "ret apy" : 1.03,
+  vals = {#"work years" : 40,    # Default values
+          #"ret years" : 30,   # These fields are now calculated
+          "start sal" : 60*1000,
+          "end sal" : 90*1000,
+          "apy" : 1.06,
+          "normalize" : False,  # Is this still useful?
+          "cont" : .05,
+          "ret apy" : 1.01,
           "age" : 25,
           "ret age" : 65,
           "life" : 95,
           "bal" : 0,
-          "pension" : 0,
-          "match" : 0
+          "pension" : 25000,
+          "match" : .03
           }
   if sys.argv[-1] == 'd':
     #return [vals[x] for x in vals] # Not here because still want to save hist
@@ -416,14 +416,15 @@ def summary(plans):
   if explain:
     print('')
     message = [
-    "Displayed are two possible strategies: either contributing to a Roth account for x years and then switching to traditional for the remainder of your career, or first contributing to a traditional account for x years and then switching to Roth for the remaining years.",
-    f"Using the Roth first strategy, it is best to switch to traditional after {best_yrs[0]} years. Your retirement income (after paying taxes) will be {int(max(tots[0]))}. Each year of retirement you should withdraw {int(rwithdraw['trad'][best_yrs[0]])} from your traditional account.",
-    f"Using the traditional first strategy, it is best to switch to Roth after {best_yrs[1]} years. Your retirement income (after paying taxes) will be {int(max(tots[1]))}. Each year of retirement you should withdraw {int(twithdraw['trad'][best_yrs[1]])} from your traditional account.",
+    #"Displayed are two possible strategies: either contributing to a Roth account for x years and then switching to traditional for the remainder of your career, or first contributing to a traditional account for x years and then switching to Roth for the remaining years.",
+    f"Using the Roth first strategy, it is best to switch to traditional after {best_yrs[0]} years. Your retirement income (after paying taxes) will be {int(max(tots[0]))}. Each year of retirement you should withdraw {int(rwithdraw['trad'][best_yrs[0]])} (before taxes) from your traditional account.",
+    f"Using the traditional first strategy, it is best to switch to Roth after {best_yrs[1]} years. Your retirement income (after paying taxes) will be {int(max(tots[1]))}. Each year of retirement you should withdraw {int(twithdraw['trad'][best_yrs[1]])} (before taxes) from your traditional account.",
     ]
     # TODO say "never switch" if that's the case, or "Best to only use x strat"
     # TODO human readable and dollar signs?
     message = [textwrap.fill(m) for m in message]
     print(*message, sep='\n\n')
+    print('')   # Padding for graph in notebook
     #print("\n"+textwrap.fill(message))  # Use width kwarg
   if not (rfirst[0]==tfirst[-1] and rfirst[-1]==tfirst[0]): # Sanity check
     print('*'*72+"\n* Something's wrong! Please save your inputs and "+\
