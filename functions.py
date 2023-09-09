@@ -56,10 +56,24 @@ def contribution(income, keep, roth=True, clim=contribution_lim):
 #def account_bal(P, apy, years):
   #return P * apy**years
 def discrepancy(income, keep):
-  roth_keep = income - contribution(income, keep) - tx.tax_calc(income)
-  trad_cont = contribution(income, keep, roth=False)
-  trad_keep = income - trad_cont - tx.tax_calc(income-trad_cont)
-  return roth_keep - trad_keep
+  old_method = False
+  if old_method:
+    roth_keep = income - contribution(income, keep) - tx.tax_calc(income)
+    trad_cont = contribution(income, keep, roth=False)
+    trad_keep = income - trad_cont - tx.tax_calc(income-trad_cont)
+    return roth_keep - trad_keep
+  rcont = keep # roth contribution
+  tcont = rcont / (1-tx.tax_rate(income))
+  mehcont = rcont / (1-tx.tax_rate(income-rcont))
+  #mehcont = rcont * (1+tx.tax_rate(income))
+  badcont = rcont * (1+tx.tax_rate(income-rcont))
+  roth_keep = income - rcont - tx.tax_calc(income)
+  trad_keep = income - tcont - tx.tax_calc(income-tcont) # Is -rcont of interest?
+  bad_keep = income - badcont - tx.tax_calc(income-badcont)
+  meh_keep = income - mehcont - tx.tax_calc(income-mehcont)
+  #return trad_keep-roth_keep
+  #return roth_keep, trad_keep, bad_keep, meh_keep
+  return tcont / rcont, 1/(badcont-rcont)*(tcont-rcont), trad_keep / roth_keep
 
 def account_bal(salary_arr, keep_arr, years, apy=1.05, roth=True, age=18, clim=[]):
   # Is years necessary? Doesn't years have to be len(arr)?
