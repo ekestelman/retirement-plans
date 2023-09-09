@@ -1,3 +1,5 @@
+import json
+
 # Use with caution: tax rules are not fully understood and may be misrepresented.
 # Income upward of 150000/yr will produce inaccurate FICA results.
 
@@ -45,6 +47,9 @@ def tax_calc(salary):
     brackets = [y for y in tax_juris[x]]
     i = 0
     taxable = max(salary - deduction[x], 0)
+    #taxable = salary - deduction[x]   # This mistake was responsible for
+                                      # steep dropoff if not trad contributions
+                                      # are ever made
     #while 0 < brackets[i] < salary-deduction[x]:
     while 0 < brackets[i] < taxable:
       taxes[x] += (brackets[i]-brackets[i-1]) * tax_juris[x][brackets[i]] * .01
@@ -84,6 +89,8 @@ if __name__ == "__main__":
   for i in range(2, 11, 2):
     print(str(i*10) + "k", tax_calc(i*10000), tax_rate(i*10000))
   #print(sum([taxes[x] for x in taxes]))
+  #with open("tax_brackets.json", 'w') as f:
+  #  json.dump(tax_juris, f)   # Maybe should use two list method instead of dic
 
 
 
