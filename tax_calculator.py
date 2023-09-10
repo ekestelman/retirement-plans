@@ -34,6 +34,7 @@ def get_brackets(loc='nyc'):
   
   tax_juris = {"fed":{}}
 
+  # TODO error handling for invalid loc
   if loc:
     state = citystate.get(loc, loc)   # Get state if city, else state=loc
     tax_juris[state] = {}
@@ -60,10 +61,11 @@ def get_brackets(loc='nyc'):
 #print(textwrap.fill("Choose one of the following locations for determining "
 #                    "taxes (must be typed exactly, omit for no state or city "
 #                    "tax):"))
-print("Choose one of the following locations for determining taxes \n"
-      "(must be typed exactly, omit for no state or local tax):")
-print(*["nyc", "ny", "ca"], sep='\n')
-location = input('> ')
+#print("Choose one of the following locations for determining taxes \n"
+#      "(must be typed exactly, omit for no state or local tax):")
+#print(*["nyc", "ny", "ca"], sep='\n')
+#location = input('> ')
+location = 'nyc'   # Default location if no user input option.
 tax_juris = get_brackets(location)  # Make this an argument in tax_calc for scalability
 std_ded = {'fed' : 12950, 'ny' : 8000, 'ca' : 5202, 'nyc': 8000}
 #cities = ['nyc']

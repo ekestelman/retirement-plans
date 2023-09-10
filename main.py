@@ -41,7 +41,7 @@ def get_vals(dic=False, loadfile=None):
           "start sal" : 60*1000,
           "end sal" : 90*1000,
           "apy" : 1.06,
-          "normalize" : False,  # Is this still useful?
+          "normalize" : False,  # Is this still useful? Actually it's broken
           "cont" : .05,
           "ret apy" : 1.01,
           "age" : 25,
@@ -454,7 +454,12 @@ def main(args):
             ubound=args["end sal"]/1000)
 
 if __name__=="__main__":
+  print("Choose one of the following locations for determining taxes \n"
+        "(must be typed exactly, omit for no state or local tax):")
+  print(*["nyc", "ny", "ca"], sep=' | ')
+  loc = input('> ')
   args = get_vals(True)
+  tx.tax_juris = tx.get_brackets(loc)
   main(args)
   #plt.stackplot(np.arange(0, len(rfirst), 1), rcomp.values())
   #plt.show()
