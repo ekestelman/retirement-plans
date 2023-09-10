@@ -1,3 +1,4 @@
+import textwrap
 import json
 
 # Use with caution: tax rules are not fully understood and may be misrepresented.
@@ -22,25 +23,78 @@ def assign_brackets(vals):
 
   return dic
 
-def get_brackets():
+citystate = {'nyc' : 'ny'}
+
+def get_brackets(loc='nyc'):
   
-  tax_juris = {"fed":{}, "nys":{}, "nyc":{}}
+  with open("tax_brackets.json") as f:
+    #tax_juris = json.load(f)
+    all_juris = json.load(f)
+  #return tax_juris
   
+  tax_juris = {"fed":{}}
+
+  if loc:
+    state = citystate.get(loc, loc)   # Get state if city, else state=loc
+    tax_juris[state] = {}
+
+  if loc in citystate:
+    tax_juris[loc] = {}
+
   for x in tax_juris:
+    tax_juris[x] = {eval(cutoff): all_juris[x][cutoff] \
+                    for cutoff in all_juris[x]}
 
-    # This shouldn't be necessary every time the calculator is called.
-    with open("tax_brackets_" + x + ".csv") as f:
-      vals = f.read().split()
-
-    tax_juris[x] = assign_brackets(vals)
   return tax_juris
 
-tax_juris = get_brackets()
+    # This shouldn't be necessary every time the calculator is called.
+  #  with open("tax_brackets_" + x + ".csv") as f:
+  #    vals = f.read().split()
 
-def tax_calc(salary):
+  #  tax_juris[x] = assign_brackets(vals)
 
+  #return tax_juris
+
+# New strat: read in all tax juris into single dict, then assign the desired one.
+
+#print(textwrap.fill("Choose one of the following locations for determining "
+#                    "taxes (must be typed exactly, omit for no state or city "
+#                    "tax):"))
+print("Choose one of the following locations for determining taxes \n"
+      "(must be typed exactly, omit for no state or local tax):")
+print(*["nyc", "ny", "ca"], sep='\n')
+location = input('> ')
+tax_juris = get_brackets(location)  # Make this an argument in tax_calc for scalability
+std_ded = {'fed' : 12950, 'ny' : 8000, 'ca' : 5202, 'nyc': 8000}
+#cities = ['nyc']
+#states = ['ny', 'ca']
+#locs = {'ny' : ['nyc'], 'ca' : []}
+#states = ('ny', 'ca')    # Better lookup time complexity than list?
+
+def tax_calc(salary, partner=None, loc='nyc'):
+
+  # Tests:
+  # salary=partner (should be same as single filer unless exceeding fica limits.
+  # swap salary and partner (should get same results).
+  # TODO this block is not yet in use
+  if partner is not None:  # partner salary can be 0 and still file jointly
+    sal1 = salary
+    sal2 = partner
+    salary = sal1 + sal2
+    # We will need a retirement plan for both partners in one iteration of 
+    # the program.
   
-  deduction = {x:y for x, y in zip(tax_juris, [12950, 8000, 8000])}
+  #deduction = {'fed': std_ded['fed']}
+  #if loc:
+  #  state = citystate.get(loc, loc)   # Get state if city, else state=loc
+    #deduction[state] = std_ded[state]
+  #  if loc in citystate:
+  #  city = loc
+    #deduction[city] = std_ded[city]
+  #deduction = {x:y for x, y in zip(tax_juris, \
+  #             [std_ded['fed'], std_ded[state], std_ded[city]])}
+  deduction = {x: std_ded[x] for x in tax_juris}
+  # get tax_juris as argument. std deduction should be dictated by juris
   taxes = {x:0 for x in tax_juris}
 
   for x in tax_juris:
