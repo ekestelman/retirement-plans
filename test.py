@@ -7,7 +7,7 @@
 # new_save = True. To test the program against previously saved answers, set \
 # new_save = False.
 # What needs to be tested? Salaries/contributions above and below limit. Non
-# zero starting balance, pension. Increased limit over 50.
+# zero starting balance, pension. Increased limit over 50. Cont > match.
 
 import json
 import main
@@ -15,6 +15,19 @@ import sys
 
 # Clean up main so that we can also just test the summary results?
 # Check which part of each test case failed? (roth, trad, or priv dict)
+# Allow clargs to choose a test case file or what file to write new cases to.
+
+for x in sys.argv[1:]:
+  if x[0] == '-':
+    continue
+    # '-' indicates flags that are not filenames
+  else:
+    casefile = x
+    break
+    # Assign clarg filename to casefile. This is the file with all test cases.
+    # Not to be confused with the file to load a new test case from.
+    # Consider reorganizing: currently first filename is casefile, filenames
+    # after are ignored and can be used for new cases. Consider different order?
 
 def ret_plan_test(args, rothorder, result, trial):
   try:
@@ -30,7 +43,8 @@ def ret_plan_test(args, rothorder, result, trial):
   except AssertionError as ae:
     print("AssertionError:", ae)
     #if False:  # Toggle for breakdown of failed cases
-    if sys.argv[-1] == "detail":
+    #if sys.argv[-1] == "detail":
+    if "-detail" in sys.argv or "-d" in sys.argv:
       for old,new,category in zip(result, new_result, ["tot", "sep", "draw"]):
         if old != new:
           print("Failed", category)
@@ -69,7 +83,8 @@ def save_output(results, fname):   # Pointless funcification?
 
 # TODO option create new save without needing to overwrite old saves?
 def overwrite():
-  if sys.argv[-1] == "new":
+  #if sys.argv[-1] == "new":
+  if "-new" in sys.argv or "-n" in sys.argv:
     print("Are you sure you want to overwrite previous test cases? (y/n)")
     answer = input()
     if answer == "y":
@@ -81,8 +96,12 @@ def overwrite():
 
 def add_case():
   try:
-    if sys.argv[1] == "add":
-      with open(sys.argv[2]) as f:
+    #if sys.argv[1] == "add":
+    # Can get rid of try-except?
+    if "-add" in sys.argv or "-a" in sys.argv:
+      #with open(sys.argv[2]) as f:
+      #with open(casefile) as f: # casefile is not the new case file
+      with open(sys.argv[-1]) as f: # Assumes last arg is new case file
         new_case = json.load(f)
       return new_case
   except IndexError:
@@ -91,19 +110,42 @@ def add_case():
 if __name__ == "__main__":
   new_save = overwrite()     # False by default
   add_case = add_case()
-  with open("test_cases.json") as f:
+  #with open("test_cases.json") as f:
+  with open(casefile) as f:
     cases = json.load(f)
+  new_cases = []  # If no add_case then we iterate over empty list.
   if add_case:
+    for x in add_case:
+      if type(x) is not dict:
+        #single = True
+        new_cases = [add_case]
+        break
+        # We can now iterate over the single test case being added.
+      else:  # type(x) is dict, we can proceed
+        new_cases = add_case  # new_cases is list of all new cases to be added.
+        break
+  # not the best variable naming...
+  if type(new_cases) is not list:
+    # Probably not necessary
+    quit("Trying to add new cases not in list format. Aborting.")
+  for add_case in new_cases:
     if add_case not in cases["ins"].values():
       # FIXME will overwrite other test case if any numbers are missing!
+      # Add a check to see if test case file is properly enumerated.
       cases["ins"][str(len(cases["ins"]))] = add_case
-      save_output(cases, "test_cases.json")
+      #save_output(cases, "test_cases.json")
+      save_output(cases, casefile)
       print("Added new test case")
     else:
       print("Duplicate test case")
+      # FIXME bug where you can add duplicate test cases if work years and/or
+      # ret years are different but will become the same after running the
+      # program (deprecated attributes that are now computed using age / ret
+      # age / life
   ins = cases["ins"]      # Inputs
   if new_save:
     outs = {}
+    # TODO way to only write new case without overwriting old
     for key in ins:
       try:
         for i in range(1,3):
@@ -114,7 +156,8 @@ if __name__ == "__main__":
         #print("KeyError:", ke, "on file", fname)
         print("KeyError:", ke, "on case", key)
     cases["outs"] = outs
-    save_output(cases, "test_cases.json")
+    #save_output(cases, "test_cases.json")
+    save_output(cases, casefile)
   else:
     outs = cases["outs"]  # Outputs
     score = 0
