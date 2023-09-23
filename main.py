@@ -394,7 +394,8 @@ def plot_pies(*strats, ubound=200, lbound=0, rates=False):   # Choice in * rathe
               # maybe better choice in args, don't need whole rcomp dic + lists
 
 #def get_results(ret_tot, all_accts, withdraw):
-def summary(plans):
+def summary(plans, cont=None):
+  # sal is current sal for explanation
   # Want plan func to call results/summary func
   # Plans is a list of 2 retirement plans to be compared.
   tots = [x[0] for x in plans]   # Total yearly retirement funds
@@ -425,13 +426,15 @@ def summary(plans):
   #print("Optimal diff:", int(max(tots[0])-max(tots[1])))
   taxable = [rwithdraw["trad"][best_yrs[0]], twithdraw["trad"][best_yrs[1]]]
   print("Yearly trad withdrawal (pretax):", \
-        int(rwithdraw["trad"][best_yrs[0]]), "or", \
-        int(twithdraw["trad"][best_yrs[1]]))
+        int(rwithdraw["trad"][best_yrs[0]]), "(Roth first) or", \
+        int(twithdraw["trad"][best_yrs[1]]), "(trad first).")
   explain = ('ex' in sys.argv)
   if explain:
     print('')
     message = [
     #"Displayed are two possible strategies: either contributing to a Roth account for x years and then switching to traditional for the remainder of your career, or first contributing to a traditional account for x years and then switching to Roth for the remaining years.",
+    f"This year you should contribute either {int(cont)} or \
+{int(cont / (1 - tx.tax_rate(cont)))}.",
     f"Using the Roth first strategy, it is best to switch to traditional after {best_yrs[0]} years. Your retirement income (after paying taxes) will be {int(max(tots[0]))}. Each year of retirement you should withdraw {int(rwithdraw['trad'][best_yrs[0]])} (before taxes) from your traditional account.",
     f"Using the traditional first strategy, it is best to switch to Roth after {best_yrs[1]} years. Your retirement income (after paying taxes) will be {int(max(tots[1]))}. Each year of retirement you should withdraw {int(twithdraw['trad'][best_yrs[1]])} (before taxes) from your traditional account.",
     ]
@@ -462,7 +465,7 @@ def compare_comp():
 
 def main(args):
   plans = [ret_plan(args, 1), ret_plan(args, 2)]
-  pie_data = summary(plans)
+  pie_data = summary(plans, args["start sal"]*args["cont"])
   tots = [x[0] for x in plans]
   plot_plan(tots)
   plot_pies(*pie_data, lbound=args["start sal"]/1000, \
