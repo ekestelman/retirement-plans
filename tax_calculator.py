@@ -72,19 +72,27 @@ std_ded = {'fed' : 12950, 'ny' : 8000, 'ca' : 5202, 'nyc': 8000}
 #states = ['ny', 'ca']
 #locs = {'ny' : ['nyc'], 'ca' : []}
 #states = ('ny', 'ca')    # Better lookup time complexity than list?
+#partner = None
 
-def tax_calc(salary, partner=None, loc='nyc'):
+def tax_calc(salary, partner=None):
 
   # Tests:
   # salary=partner (should be same as single filer unless exceeding fica limits.
   # swap salary and partner (should get same results).
   # TODO this block is not yet in use
+  sal1 = salary
   if partner is not None:  # partner salary can be 0 and still file jointly
-    sal1 = salary
     sal2 = partner
-    salary = sal1 + sal2
+    salary = (sal1 + sal2) / 2
+    # Equivalent to doubling standard deduction and bracket cutoffs.
+  else:
+    sal2 = 0
     # We will need a retirement plan for both partners in one iteration of 
-    # the program.
+    # the program. Need partner sal input for contribution/growth fun?
+    # This function is used to find tax rate to know how much each spouse can
+    # contribute. `cont` can be the percentage each spouse puts in (equivalent
+    # to percent of total, but may be unoptimized given fica. Can further
+    # optimize if one spouse has excess while other is below max.
   
   #deduction = {'fed': std_ded['fed']}
   #if loc:
@@ -114,8 +122,15 @@ def tax_calc(salary, partner=None, loc='nyc'):
     taxes[x] += (taxable - brackets[i-1]) * \
                  tax_juris[x][brackets[i]] * .01
 
-  soc_sec = .062 * min(salary, 160200)
-  medi = .0145 * salary + .009 * max(salary-200000, 0)
+  if partner is not None:
+    salary *= 2
+    surtax = 50000  # Cutoff for micare surtax added for married filers
+    taxes = {x:taxes[x]*2 for x in taxes}
+  else:
+    surtax = 0  # No increased cutoff for medicare tax for single filers
+
+  soc_sec = .062 * ( min(sal1, 160200) + min(sal2, 160200) )
+  medi = .0145 * salary + .009 * max(salary-200000-surtax, 0)
   fica = soc_sec + medi
   taxes["fica"] = fica
 

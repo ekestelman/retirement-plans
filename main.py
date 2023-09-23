@@ -116,7 +116,7 @@ def get_vals(dic=False, loadfile=None):
     return vals
   return [vals[x] for x in vals]
 
-def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
+def ret_plan(vals, rothorder, partner=None):  # roth takes value 1 or 2 to indicate 1st or 2nd
   # TODO give rothorder default value?
   if not vals.get("normalize"):   # Allow widget.py to not show normalize
     vals["normalize"] = False     # These hacks aren't necessary with new method
@@ -124,12 +124,27 @@ def ret_plan(vals, rothorder):  # roth takes value 1 or 2 to indicate 1st or 2nd
   # rothorder arg pointless?
   vals['work years'] = vals['ret age'] - vals['age']  # Assign calculated vars
   vals["ret years"] = vals["life"] - vals["ret age"]
+  if partner:
+    partner['work years'] = partner['ret age'] - partner['age']
+    partner['ret years'] = partner['life'] - partner['ret age']
+    start2 = partner.get("start sal2")
+    end2 = partner.get("end sal2")
+  #if (start2 != None) and (end2 != None):
+    sal2 = np.linspace(start2, end2, partner['work years'])
+  else:
+    sal2 = None   # set sal2 for married filing option
+    # Partner needs their own val for each category.
+    # Gets own clim (diff age) etc.
   salaries = np.linspace(vals["start sal"], vals["end sal"], vals["work years"])
                 # Better to do this in get_vals()?
   clim = fun.contribution_lim
   clim = [fun.contribution_lim for i in range(vals['age'], 50)]
   clim += [fun.contribution_lim + fun.catchup_bonus for i in \
            range(50, vals['ret age'])]
+  # FIXME different clim list for partner or clim dict with each age
+  # or choose clim on each iteration?
+  # Each of the variables assigned here should be part of a person or
+  # partner object.
   # TODO clim also being used in fun.contribution?
   # TODO may be easier to get the right match if cont list is established for
   # each plan (i.e., a cont list for switching from roth to trad at 0, at 1, 
@@ -454,11 +469,29 @@ def main(args):
             ubound=args["end sal"]/1000)
 
 if __name__=="__main__":
-  print("Choose one of the following locations for determining taxes \n"
-        "(must be typed exactly, omit for no state or local tax):")
-  print(*["nyc", "ny", "ca"], sep=' | ')
-  loc = input('> ')
+  tx.partner=None
+  print("tx.partner =", tx.partner)
+  if False:  # Prompt user for location and filing status
+    print("Choose one of the following locations for determining taxes \n"
+          "(must be typed exactly, omit for no state or local tax):")
+    print(*["nyc", "ny", "ca"], sep=' | ')
+    loc = input('> ')
+    #filing = input("Filing status (s/m): ")
+    married = input("Married filing jointly? (y/n)\n> ")
+  else:   # Defaults if not prompting
+    loc = 'nyc'
+    married = 'y'
+  if married == 'y':
+    print("Program will run for married filing jointly.")
+    #tx.partner = 0 # Needs to be determined each year
+  else:
+    print("Program will run for single filer.")
+  print("tx.partner =", tx.partner)
   args = get_vals(True)
+  if married == 'y':
+    partner = get_vals(True)
+    # clarg still dictates this call to get_vals
+    # Adjust get_vals such that takes argument that is filename?
   tx.tax_juris = tx.get_brackets(loc)
   main(args)
   #plt.stackplot(np.arange(0, len(rfirst), 1), rcomp.values())
