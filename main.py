@@ -309,6 +309,8 @@ def ret_plan(vals, rothorder, partner=None):  # roth takes value 1 or 2 to indic
   #if ret_growth_factor != 1:
   if not old_method:
     #return all_accts
+    # FIXME need to somehow output cont and excess for directions.
+    # Consider a ret plan object
     return ret_tot, all_accts, withdraw
   yearly_ret = [x / vals["ret years"] for x in ret_tot]
   return yearly_ret
@@ -431,16 +433,22 @@ def summary(plans, args):
   explain = ('ex' in sys.argv)
   if explain:
     print('')
+    # FIXME recommendation for this year won't work for going over cont limit
+    # should just pass cont args from ret_plan
+    # TODO ^fixed but need to clean up the mess below so I can omit priv when 0
+    # need to assign variables for cleanup
+    # Consider outputting this years directions to a table
     message = [
     #"Displayed are two possible strategies: either contributing to a Roth account for x years and then switching to traditional for the remainder of your career, or first contributing to a traditional account for x years and then switching to Roth for the remaining years.",
-    f"This year you should contribute either {int(args['start sal']*args['cont'])} or {int(args['start sal']*args['cont'] / (1 - tx.tax_rate(args['start sal'])))}.",
-    f"Using the Roth first strategy, it is best to switch to traditional after {best_yrs[0]} years. Your retirement income (after paying taxes) will be {int(max(tots[0]))}. Each year of retirement you should withdraw {int(rwithdraw['trad'][best_yrs[0]])} (before taxes) from your traditional account.",
+    f"This year you should contribute either {min(int(args['start sal']*args['cont']), fun.contribution_lim)} to Roth", "or", f"{min(int(args['start sal']*args['cont'] / (1 - tx.tax_rate(args['start sal']))), fun.contribution_lim)} to trad" +
+    (f" and {int(max(min(args['start sal']*args['cont'],fun.contribution_lim) * (1+tx.tax_rate(args['start sal'])) - fun.contribution_lim, 0))} towards private brokerage." if 1 else "."),"",
+    f"Using the Roth first strategy, it is best to switch to traditional after {best_yrs[0]} years. Your retirement income (after paying taxes) will be {int(max(tots[0]))}. Each year of retirement you should withdraw {int(rwithdraw['trad'][best_yrs[0]])} (before taxes) from your traditional account.","",
     f"Using the traditional first strategy, it is best to switch to Roth after {best_yrs[1]} years. Your retirement income (after paying taxes) will be {int(max(tots[1]))}. Each year of retirement you should withdraw {int(twithdraw['trad'][best_yrs[1]])} (before taxes) from your traditional account.",
     ]
     # TODO say "never switch" if that's the case, or "Best to only use x strat"
     # TODO human readable and dollar signs?
     message = [textwrap.fill(m) for m in message]
-    print(*message, sep='\n\n')
+    print(*message, sep='\n')
     print('')   # Padding for graph in notebook
     #print("\n"+textwrap.fill(message))  # Use width kwarg
   if not (rfirst[0]==tfirst[-1] and rfirst[-1]==tfirst[0]): # Sanity check
