@@ -438,10 +438,22 @@ def summary(plans, args):
     # TODO ^fixed but need to clean up the mess below so I can omit priv when 0
     # need to assign variables for cleanup
     # Consider outputting this years directions to a table
+    # If we give instructions, directions can be more precise and computation
+    # can be more complicated.
+    tax = tx.tax_rate(args['start sal'])
+    rcont = min(args['start sal']*args['cont'], fun.contribution_lim)
+    tcont = min(args['start sal']*args['cont'] / (1 - tax), \
+                fun.contribution_lim)
+    pcont = max(rcont * (1 + tax) - fun.contribution_lim, 0)
+    rcont, tcont, pcont = int(rcont), int(tcont), int(pcont)
+    # Directions will have to be different for mixed contributions.
     message = [
     #"Displayed are two possible strategies: either contributing to a Roth account for x years and then switching to traditional for the remainder of your career, or first contributing to a traditional account for x years and then switching to Roth for the remaining years.",
-    f"This year you should contribute either {min(int(args['start sal']*args['cont']), fun.contribution_lim)} to Roth", "or", f"{min(int(args['start sal']*args['cont'] / (1 - tx.tax_rate(args['start sal']))), fun.contribution_lim)} to trad" +
-    (f" and {int(max(min(args['start sal']*args['cont'],fun.contribution_lim) * (1+tx.tax_rate(args['start sal'])) - fun.contribution_lim, 0))} towards private brokerage." if 1 else "."),"",
+    # Use (a) (b) or A. B. instead of - and "or"?
+    "This year you should contribute either:",
+    f" - {rcont} to Roth, or", #" or",
+    f" - {tcont} to trad" +
+    (f" and {pcont} towards private brokerage." if pcont else "."),"",
     f"Using the Roth first strategy, it is best to switch to traditional after {best_yrs[0]} years. Your retirement income (after paying taxes) will be {int(max(tots[0]))}. Each year of retirement you should withdraw {int(rwithdraw['trad'][best_yrs[0]])} (before taxes) from your traditional account.","",
     f"Using the traditional first strategy, it is best to switch to Roth after {best_yrs[1]} years. Your retirement income (after paying taxes) will be {int(max(tots[1]))}. Each year of retirement you should withdraw {int(twithdraw['trad'][best_yrs[1]])} (before taxes) from your traditional account.",
     ]
