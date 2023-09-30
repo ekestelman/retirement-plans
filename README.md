@@ -26,6 +26,18 @@ To automatically fill in the last used values from a previous execution, run `py
 
 To automatically fill in values from another file, run `python3 main.py use [filename]`. Values should be in JSON format. If you don't know how to properly format the file, simply run the code with any other values, then copy the "history.txt" file and substitute in the desired values.
 
+## Screenshots
+
+The following figure is a sample output of the program.
+
+![](https://github.com/ekestelman/retirement-plans/blob/main/Retirement%20Images/main_plot.png)
+
+<!--
+Using specified inputs, the axes display two curves. The blue represents first contributing to a Roth account, then switching to traditional after _x_ years. The orange represents first contributing to a traditional account, then switching to Roth after _x_ years. Using the Roth first strategy gives the best results if this user switches to traditional in 17 years. The traditional first strategy is best if this user switches immediately (that is, they would only ever contribute to Roth). In this case, we can likely conclude that it is best for this user to contribute to a Roth account for now, and should consider switching at some time in the future (possibly in 17 years).
+
+The pie charts show this user's retirement income breakdown for the maximum of each curve. That is, the Roth first pie chart is for the Roth first strategy and switching in 17 years. the trad first pie chart is for the trad first strategy and switching immediately.
+-->
+
 ## Disclaimers and Explanations
 
 For more information on how the code works and what factors are and are not considered, please see the [Explanations](https://colab.research.google.com/drive/1fQHGKQeZxlU-GnJP_kfV_JBNT7Nr-kEf#scrollTo=Explanations) on the project's Colab.
